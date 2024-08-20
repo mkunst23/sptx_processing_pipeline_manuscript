@@ -32,7 +32,6 @@ colnames(coordinates_sis) <- c("x_coordinate","y_coordinate")
 coordinates_sis$section <- sis$obs$section
 
 
-metadata_sis <- sis$obs
 # set of sections
 section_set <- c("1199650950","1199650944","1199650938","1199651036","1199651048")
 
