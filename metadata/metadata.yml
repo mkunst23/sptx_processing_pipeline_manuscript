@@ -1,7 +1,7 @@
 metadata_version: 1
-name: code-ocean-capsule-template
+name: sptx_processing_pipeline_manuscript
 description: Basic structure of a capsule to be customized as needed.
 authors:
-- name: AIND
-- name: Tom Chartrand
-- name: Meghan Turner
+- name: AIBS
+- name: Michael Kunst
+
