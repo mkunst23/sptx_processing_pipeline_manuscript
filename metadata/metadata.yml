@@ -1,7 +1,8 @@
 metadata_version: 1
 name: sptx_processing_pipeline_manuscript
 description: Basic structure of a capsule to be customized as needed.
+tags:
+- mouseadult
 authors:
 - name: AIBS
 - name: Michael Kunst
-
