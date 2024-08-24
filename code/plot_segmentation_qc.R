@@ -17,6 +17,7 @@ suppressPackageStartupMessages({
   library(ttr)
   library(devtools)
   library(RColorBrewer)
+  library(googlesheets4)
   library(plyr)
 })
 
@@ -25,12 +26,24 @@ options(stringsAsFactors = FALSE)
 options(scipen=9999)
 options(mc.cores=30)
 
-#TODO add in class label and cluster avg correlation
+gs4_deauth()
+
+ss <- "https://docs.google.com/spreadsheets/d/1a4URa_t3oc824vjIA8LcyYmJrv0-2Rm7Q5eJq42re2c/edit?usp=sharing"
+class_colors <- read_sheet(ss,sheet="classes")
+class_color_palette <- setNames(class_colors$class_color, class_colors$class_id_label)
+subclass_colors <- read_sheet(ss, sheet="subclasses")
+subclass_color_palette <- setNames(subclass_colors$subclass_color, subclass_colors$subclass_id_label)
+supertype_colors <- read_sheet(ss, sheet="supertypes")
+supertype_color_palette <- setNames(supertype_colors$supertype_color_new, supertype_colors$supertype_id_label)
+
+
 #TODO add in doublet detection
 
 # read in old segmentation
-vpt <- read_h5ad("/data/VPT_processed_data/mouse_638850_processed_VPT.h5ad")
-metadata_vpt <- vpt$obs
+#vpt <- read_h5ad("/data/VPT_processed_data/mouse_638850_processed_VPT.h5ad")
+#metadata_vpt <- vpt$obs
+save(metadata_vpt, file = "/scratch/metadata_vpt.rda")
+load("/scratch/metadata_vpt.rda")
 final_vpt <- metadata_vpt %>%
   filter(final_filter == FALSE) %>%
   select(volume,
@@ -48,6 +61,8 @@ final_vpt$tool <- "VPT"
 # read in new segmentation
 sis <- read_h5ad("/data/SIS_processed_data/mouse_638850_processed_SIS.h5ad")
 metadata_sis <- sis$obs
+save(metadata_sis, file = "/scratch/metadata_sis.rda")
+load("/scratch/metadata_sis.rda")
 final_sis <- metadata_sis %>% 
   filter(final_filter == FALSE) %>%
   filter(!is.na(volume)) %>% 
@@ -202,7 +217,7 @@ ggsave(filename = "/results/correlation_by_class_qc.pdf",
 
 # subset dataset to two subclasses
 vol_comp_1 <- combined_meta %>% 
-  filter(flat_CDM_subclass_name %in% c("046 Vip Gaba","047 Sncg Gaba"))
+  filter(flat_CDM_subclass_name %in% c("046 Vip Gaba","022 L5 ET CTX Glut"))
 
 plot1 <- ggplot(vol_comp_1, 
                 aes(x = tool, 
@@ -272,12 +287,12 @@ ggsave(filename = "/results/small_vs_large_1_qc.pdf",
        dpi = 300)
 
 
-
+# look at random cortical cell types
 
 vol_comp_1 <- combined_meta %>% 
-  filter(flat_CDM_subclass_name %in% c("037 DG Glut","022 L5 ET CTX Glut"))
+  filter(flat_CDM_subclass_name %in% c("046 Vip Gaba","047 Sncg Gaba"))
 
-plot1 <- ggplot(vol_comp_1, 
+plot <- ggplot(vol_comp_1, 
                 aes(x = tool, 
                     y = volume, 
                     fill = flat_CDM_subclass_name)) + 
@@ -295,54 +310,115 @@ plot1 <- ggplot(vol_comp_1,
   theme_minimal() + # Remove x-axis elements
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-vol_comp_1 <- combined_meta %>% 
-  filter(flat_CDM_subclass_name %in% c("037 DG Glut","058 PAL-STR Gaba-Chol"))
-
-plot2 <- ggplot(vol_comp_1, 
-                aes(x = tool, 
-                    y = volume, 
-                    fill = flat_CDM_subclass_name)) + 
-  geom_split_violin(alpha = .4) +
-  geom_boxplot(width = .2, 
-               alpha = .6, 
-               fatten = NULL, 
-               show.legend = F) +
-  stat_summary(fun = "median", 
-               show.legend = F,
-               position = position_dodge(.2)) +
-  #coord_trans(y = "log10") +
-  scale_fill_brewer(palette = "Dark2", name = "Subclass") +
-  labs(x = "", y = "cell volume") + # Customize axis labels
-  theme_minimal() + # Remove x-axis elements
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-vol_comp_1 <- combined_meta %>% 
-  filter(flat_CDM_subclass_name %in% c("037 DG Glut","215 SNc-VTA-RAmb Foxa1 Dopa"))
-
-plot3 <- ggplot(vol_comp_1, 
-                aes(x = tool, 
-                    y = volume, 
-                    fill = flat_CDM_subclass_name)) + 
-  geom_split_violin(alpha = .4) +
-  geom_boxplot(width = .2, 
-               alpha = .6, 
-               fatten = NULL, 
-               show.legend = F) +
-  stat_summary(fun = "median", 
-               show.legend = F,
-               position = position_dodge(.2)) +
-  #coord_trans(y = "log10") +
-  scale_fill_brewer(palette = "Dark2", name = "Subclass") +
-  labs(x = "", y = "cell volume") + # Customize axis labels
-  theme_minimal() + # Remove x-axis elements
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-combined_plots <- plot_grid(plot1, plot2, plot3, nrow = 1)
-
-ggsave(filename = "/results/small_vs_large_2_qc.pdf", 
-       plot = combined_plots, 
+# look at volume distribution
+ggsave(filename = "/results/random_cortical_cell_types_qc.pdf", 
+       plot = plot, 
        width = 12,
        height = 7, 
        dpi = 300)
 
+cluster_names <- sort(unique(metadata_sis$flat_CDM_subclass_name))
+cluster_names <- as.character(cluster_names)
  
+# look at distribution within subclass 047
+vol_comp_1 <- combined_meta %>% 
+  filter(flat_CDM_subclass_name == cluster_names[8])
+
+plot <- ggplot(vol_comp_1, 
+               aes(x = flat_CDM_supertype_name, 
+                   y = volume,
+                   fill = flat_CDM_supertype_name)) + 
+  geom_violin(alpha = .4) +
+  geom_boxplot(width = .2, 
+               alpha = .6, 
+               fatten = NULL, 
+               show.legend = F) +
+  stat_summary(fun = "median", 
+               show.legend = F) +
+  #coord_trans(y = "log10") +
+  ggtitle(cluster_names[8]) +
+  scale_fill_manual(values=supertype_color_palette) +
+  facet_wrap(~tool) +
+  labs(x = "", y = "cell volume") + # Customize axis labels
+  theme_minimal() + # Remove x-axis elements
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+fixed_name <-  gsub("/", "-", cluster_names[8])
+
+# look at volume distribution
+ggsave(filename = paste0("/results/volume_",fixed_name,".pdf"), 
+       plot = plot, 
+       width = 12,
+       height = 7, 
+       dpi = 300)
+
+
+subclass_name <- cluster_names[25]
+
+vol_comp_1 <- combined_meta %>% 
+  filter(flat_CDM_subclass_name == subclass_name)
+
+plot <- ggplot(vol_comp_1, 
+               aes(x = flat_CDM_supertype_name, 
+                   y = volume,
+                   fill = flat_CDM_supertype_name)) + 
+  geom_violin(alpha = .4) +
+  geom_boxplot(width = .2, 
+               alpha = .6, 
+               fatten = NULL, 
+               show.legend = F) +
+  stat_summary(fun = "median", 
+               show.legend = F) +
+  #coord_trans(y = "log10") +
+  ggtitle(subclass_name) +
+  scale_fill_manual(values=supertype_color_palette) +
+  facet_wrap(~tool) +
+  labs(x = "", y = "cell volume") + # Customize axis labels
+  theme_minimal() + # Remove x-axis elements
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+fixed_name <-  gsub("/", "-", subclass_name)
+
+# look at volume distribution
+ggsave(filename = paste0("/results/volume_",fixed_name,".pdf"), 
+       plot = plot, 
+       width = 12,
+       height = 7, 
+       dpi = 300)
+
+
+
+
+subclass_name <- cluster_names[69]
+
+vol_comp_1 <- combined_meta %>% 
+  filter(flat_CDM_subclass_name == subclass_name)
+
+plot <- ggplot(vol_comp_1, 
+               aes(x = flat_CDM_supertype_name, 
+                   y = volume,
+                   fill = flat_CDM_supertype_name)) + 
+  geom_violin(alpha = .4) +
+  geom_boxplot(width = .2, 
+               alpha = .6, 
+               fatten = NULL, 
+               show.legend = F) +
+  stat_summary(fun = "median", 
+               show.legend = F) +
+  #coord_trans(y = "log10") +
+  ggtitle(subclass_name) +
+  scale_fill_manual(values=supertype_color_palette) +
+  facet_wrap(~tool) +
+  labs(x = "", y = "cell volume") + # Customize axis labels
+  theme_minimal() + # Remove x-axis elements
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+fixed_name <-  gsub("/", "-", subclass_name)
+
+# look at volume distribution
+ggsave(filename = paste0("/results/volume_",fixed_name,".pdf"), 
+       plot = plot, 
+       width = 12,
+       height = 7, 
+       dpi = 300)
+
