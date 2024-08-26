@@ -1,4 +1,4 @@
-# hash:sha256:03bf2b5698a88d7ba706cafdf835d3e5d9ea1a3ef420d156cb89fef89d6f655c
+# hash:sha256:a2866dfce2dd4757bef6bc092617b5dc845ea6b29a23105e9453a01dd16b8c72
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/py-r:python3.10.12-R4.2.3-IRkernel-ubuntu22.04
 
@@ -14,6 +14,7 @@ COPY git-askpass /
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libcurl4-openssl-dev=7.81.0-1ubuntu1.13 \
+        libx11-dev=2:1.7.5-1ubuntu0.3 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -U --no-cache-dir \
@@ -43,6 +44,7 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.24")' \
     && Rscript -e 'remotes::install_version("ggforce", "0.4.2")' \
     && Rscript -e 'remotes::install_version("ggplot2", "3.5.1")' \
     && Rscript -e 'remotes::install_version("ggraph", "2.2.1")' \
+    && Rscript -e 'remotes::install_version("ggrastr", "1.0.2")' \
     && Rscript -e 'remotes::install_version("googlesheets4", "1.1.1")' \
     && Rscript -e 'remotes::install_version("graphlayouts", "1.1.1")' \
     && Rscript -e 'remotes::install_version("grid", "4.2.3")' \

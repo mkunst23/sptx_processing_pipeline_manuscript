@@ -19,6 +19,8 @@ suppressPackageStartupMessages({
   library(RColorBrewer)
   library(googlesheets4)
   library(plyr)
+  library(ggrastr)
+  library(forcats)
 })
 
 
@@ -42,7 +44,7 @@ supertype_color_palette <- setNames(supertype_colors$supertype_color_new, supert
 # read in old segmentation
 #vpt <- read_h5ad("/data/VPT_processed_data/mouse_638850_processed_VPT.h5ad")
 #metadata_vpt <- vpt$obs
-save(metadata_vpt, file = "/scratch/metadata_vpt.rda")
+#save(metadata_vpt, file = "/scratch/metadata_vpt.rda")
 load("/scratch/metadata_vpt.rda")
 final_vpt <- metadata_vpt %>%
   filter(final_filter == FALSE) %>%
@@ -54,14 +56,15 @@ final_vpt <- metadata_vpt %>%
          flat_CDM_subclass_name,
          flat_CDM_supertype_name,
          flat_CDM_cluster_name,
-         flat_CDM_cluster_avg_correlation)
+         flat_CDM_cluster_avg_correlation,
+         section)
 
 final_vpt$tool <- "VPT"
 
 # read in new segmentation
-sis <- read_h5ad("/data/SIS_processed_data/mouse_638850_processed_SIS.h5ad")
-metadata_sis <- sis$obs
-save(metadata_sis, file = "/scratch/metadata_sis.rda")
+#sis <- read_h5ad("/data/SIS_processed_data/mouse_638850_processed_SIS.h5ad")
+#metadata_sis <- sis$obs
+#save(metadata_sis, file = "/scratch/metadata_sis.rda")
 load("/scratch/metadata_sis.rda")
 final_sis <- metadata_sis %>% 
   filter(final_filter == FALSE) %>%
@@ -74,7 +77,8 @@ final_sis <- metadata_sis %>%
          flat_CDM_subclass_name,
          flat_CDM_supertype_name,
          flat_CDM_cluster_name,
-         flat_CDM_cluster_avg_correlation)
+         flat_CDM_cluster_avg_correlation,
+         section)
 
 final_sis$tool <- "SIS"
 
@@ -421,4 +425,30 @@ ggsave(filename = paste0("/results/volume_",fixed_name,".pdf"),
        width = 12,
        height = 7, 
        dpi = 300)
+
+# plot number of cells per section for sis or vpt
+summary_data <- combined_meta %>%
+  group_by(section, tool) %>%
+  dplyr::summarise(count = n()) %>%
+  ungroup()
+
+# Create the bar graph
+plot <- ggplot(summary_data, 
+       aes(x = fct_rev(section), 
+           y = count, 
+           fill = tool)) +
+  geom_bar(stat = "identity", position = position_dodge2()) +
+  labs(title = "Number of cells per section",
+       x = "Section",
+       y = "# of high quality cells") +
+  scale_fill_brewer(palette = "Dark2", name = "Segmentation Tool") +
+  theme_minimal() + # Remove x-axis elements
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# count subclasses and find the one with the biggest difference
+
+summary_data <- combined_meta %>%
+  group_by(section, tool) %>%
+  dplyr::summarise(count = n()) %>%
+  ungroup()
 
