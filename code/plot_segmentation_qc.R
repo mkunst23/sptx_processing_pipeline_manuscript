@@ -156,11 +156,11 @@ plot <- ggplot(combined_meta, aes(x = factor(1), y = total_counts, fill = tool))
   labs(x = "", y = "# of total mRNA molecules per cell") + # Customize axis labels
   theme_minimal() # Remove x-axis elements
 
-ggsave(filename = "/results/number_of_spots_qc.pdf", 
-       plot = plot, 
+ggsave(filename = "/results/number_of_spots_qc.png", 
+       plot = plot,
        width = 5,
        height = 10, 
-       dpi = 300)
+       dpi = 72)
 
 density_meds <- ddply(combined_meta, .(tool), summarise, med = median(total_counts_per_cell_volume))
 
@@ -391,8 +391,6 @@ ggsave(filename = paste0("/results/volume_",fixed_name,".pdf"),
        dpi = 300)
 
 
-
-
 subclass_name <- cluster_names[69]
 
 vol_comp_1 <- combined_meta %>% 
@@ -445,10 +443,65 @@ plot <- ggplot(summary_data,
   theme_minimal() + # Remove x-axis elements
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+ggsave(filename = "/results/cell_per_section.pdf", 
+       plot = plot, 
+       width = 12,
+       height = 5, 
+       dpi = 300)
+
+
 # count subclasses and find the one with the biggest difference
 
-summary_data <- combined_meta %>%
-  group_by(section, tool) %>%
+summary_data_sis <- combined_meta %>%
+  filter(tool == "SIS") %>% 
+  group_by(flat_CDM_subclass_name) %>%
   dplyr::summarise(count = n()) %>%
   ungroup()
 
+# make pie chart
+plot <- ggplot(summary_data_sis, aes(x = "", y = count, fill = flat_CDM_subclass_name)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  scale_fill_manual(values = subclass_color_palette) +
+  labs(title = "SIS Segmentation",
+       x = NULL,
+       y = NULL) +
+  theme_void() +
+  theme(legend.position = "none")
+
+ggsave(filename = "/results/subclass_distribution_sis.pdf", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 300)
+
+# plot distribution for VPT
+summary_data_vpt <- combined_meta %>%
+  filter(tool == "VPT") %>% 
+  group_by(flat_CDM_subclass_name) %>%
+  dplyr::summarise(count = n()) %>%
+  ungroup()
+
+plot <- ggplot(summary_data_vpt, aes(x = "", y = count, fill = flat_CDM_subclass_name)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  scale_fill_manual(values = subclass_color_palette) +
+  labs(title = "Pie Chart Example",
+       x = NULL,
+       y = NULL) +
+  theme_void() +
+  theme(legend.position = "none")
+
+ggsave(filename = "/results/subclass_distribution_vpt.pdf", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 300)
+
+# merge and calculate ratio
+subclass_merge <- merge(summary_data_sis,
+                        summary_data_vpt,
+                        by = "flat_CDM_subclass_name")
+
+subclass_merge$subclass_merge_ratio <- subclass_merge$count.x/subclass_merge$count.y
+subclass_merge$absolute_change <- subclass_merge$count.x - subclass_merge$count.y

@@ -1,4 +1,4 @@
-# hash:sha256:a2866dfce2dd4757bef6bc092617b5dc845ea6b29a23105e9453a01dd16b8c72
+# hash:sha256:910cc7cd51216ed0f566486e19a4a0027011020374d9e510771e1c8f9494aad0
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/py-r:python3.10.12-R4.2.3-IRkernel-ubuntu22.04
 
@@ -47,7 +47,6 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.24")' \
     && Rscript -e 'remotes::install_version("ggrastr", "1.0.2")' \
     && Rscript -e 'remotes::install_version("googlesheets4", "1.1.1")' \
     && Rscript -e 'remotes::install_version("graphlayouts", "1.1.1")' \
-    && Rscript -e 'remotes::install_version("grid", "4.2.3")' \
     && Rscript -e 'remotes::install_version("gridExtra", "2.3")' \
     && Rscript -e 'remotes::install_version("gridGraphics", "0.5-1")' \
     && Rscript -e 'remotes::install_version("igraph", "2.0.3")' \
