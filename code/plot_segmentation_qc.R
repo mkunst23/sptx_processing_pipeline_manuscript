@@ -42,7 +42,7 @@ supertype_color_palette <- setNames(supertype_colors$supertype_color_new, supert
 #TODO add in doublet detection
 
 # read in old segmentation
-#vpt <- read_h5ad("/data/VPT_processed_data/mouse_638850_processed_VPT.h5ad")
+#vpt <- read_h5ad("/data/merscope_638850_mouseadult_processed_VPT/whole_dataset/mouse_638850_filtered.h5ad")
 #metadata_vpt <- vpt$obs
 #save(metadata_vpt, file = "/scratch/metadata_vpt.rda")
 load("/scratch/metadata_vpt.rda")
