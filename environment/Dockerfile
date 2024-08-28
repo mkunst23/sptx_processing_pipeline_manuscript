@@ -1,4 +1,4 @@
-# hash:sha256:910cc7cd51216ed0f566486e19a4a0027011020374d9e510771e1c8f9494aad0
+# hash:sha256:fcae4460cb6c127f1c2b2e5f9af1e1aa1a2f3e60a7e0c1b4d8b22a41d7f4ad06
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/py-r:python3.10.12-R4.2.3-IRkernel-ubuntu22.04
 
@@ -27,7 +27,7 @@ RUN pip install -U --no-cache-dir \
 
 ARG RCACHE_OPTIONS
 RUN echo $RCACHE_OPTIONS >> $(Rscript -e 'cat(R.home())')/etc/Rprofile.site
-RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.24")' \
+RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("Rvcg", "0.23")' \
     && Rscript -e 'remotes::install_version("alphashape3d", "1.3.2")' \
     && Rscript -e 'remotes::install_version("anndata", "0.7.5.6")' \
@@ -37,7 +37,8 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.24")' \
     && Rscript -e 'remotes::install_version("colorRamps", "2.3.4")' \
     && Rscript -e 'remotes::install_version("concaveman")' \
     && Rscript -e 'remotes::install_version("cowplot", "1.1.3")' \
-    && Rscript -e 'remotes::install_version("data.table", "1.15.4")' \
+    && Rscript -e 'remotes::install_version("dabestr", "2023.9.12")' \
+    && Rscript -e 'remotes::install_version("data.table", "1.16.0")' \
     && Rscript -e 'remotes::install_version("doParallel", "1.0.17")' \
     && Rscript -e 'remotes::install_version("dplyr", "1.1.4")' \
     && Rscript -e 'remotes::install_version("entropy", "1.3.1")' \

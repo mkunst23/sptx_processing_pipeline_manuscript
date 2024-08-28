@@ -57,7 +57,8 @@ final_vpt <- metadata_vpt %>%
          flat_CDM_supertype_name,
          flat_CDM_cluster_name,
          flat_CDM_cluster_avg_correlation,
-         section)
+         section,
+         incongruous_genes_pct)
 
 final_vpt$tool <- "VPT"
 
@@ -78,7 +79,8 @@ final_sis <- metadata_sis %>%
          flat_CDM_supertype_name,
          flat_CDM_cluster_name,
          flat_CDM_cluster_avg_correlation,
-         section)
+         section,
+         incongruous_genes_pct)
 
 final_sis$tool <- "SIS"
 
@@ -185,6 +187,31 @@ ggsave(filename = "/results/density_qc.pdf",
        width = 5,
        height = 10, 
        dpi = 300)
+
+incongruent_meds <- ddply(combined_meta, .(tool), summarise, med = median(incongruous_genes_pct))
+
+# plot comparison between total counts detected
+plot <- ggplot(combined_meta, aes(x = factor(1), y = log2(incongruous_genes_pct+1), fill = tool)) + 
+  geom_split_violin(alpha = .4) +
+  geom_boxplot(width = .2, 
+               alpha = .6, 
+               fatten = NULL, 
+               show.legend = F) +
+  stat_summary(fun = "median", 
+               show.legend = F,
+               position = position_dodge(.2)) +
+  #coord_trans(y = "log10") +
+  scale_fill_brewer(palette = "Dark2", name = "Segmentation Tool") +
+  #ylim(0,1000) +
+  labs(x = "", y = "% of incongruent genes per cell [log2]") + # Customize axis labels
+  theme_minimal() # Remove x-axis elements
+
+ggsave(filename = "/results/incongruent_qc.pdf", 
+       plot = plot, 
+       width = 5,
+       height = 10, 
+       dpi = 300)
+
 
 #TODO plot avg.coorelation split up by cluster
 # plot comparison between total counts detected
@@ -486,7 +513,7 @@ plot <- ggplot(summary_data_vpt, aes(x = "", y = count, fill = flat_CDM_subclass
   geom_bar(stat = "identity", width = 1) +
   coord_polar(theta = "y") +
   scale_fill_manual(values = subclass_color_palette) +
-  labs(title = "Pie Chart Example",
+  labs(title = "VPT Segmentation",
        x = NULL,
        y = NULL) +
   theme_void() +
