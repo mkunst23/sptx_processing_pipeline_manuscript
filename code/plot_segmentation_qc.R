@@ -38,7 +38,6 @@ subclass_color_palette <- setNames(subclass_colors$subclass_color, subclass_colo
 supertype_colors <- read_sheet(ss, sheet="supertypes")
 supertype_color_palette <- setNames(supertype_colors$supertype_color_new, supertype_colors$supertype_id_label)
 
-
 #TODO add in doublet detection
 
 # read in old segmentation
@@ -205,6 +204,18 @@ plot <- ggplot(combined_meta, aes(x = factor(1), y = log2(incongruous_genes_pct+
   #ylim(0,1000) +
   labs(x = "", y = "% of incongruent genes per cell [log2]") + # Customize axis labels
   theme_minimal() # Remove x-axis elements
+
+data("non_proportional_data")
+
+dabest_obj.mean_diff <- load(
+  data = non_proportional_data,
+  x = Group,
+  y = Measurement,
+  idx = c("Control 1", "Test 1")
+) %>%
+  mean_diff()
+
+dabest_plot(dabest_obj.mean_diff, TRUE)
 
 ggsave(filename = "/results/incongruent_qc.pdf", 
        plot = plot, 
