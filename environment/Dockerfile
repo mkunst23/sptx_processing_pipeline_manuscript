@@ -1,4 +1,4 @@
-# hash:sha256:fcae4460cb6c127f1c2b2e5f9af1e1aa1a2f3e60a7e0c1b4d8b22a41d7f4ad06
+# hash:sha256:517fe836d288d9355e9d553ce5891d2ae59e6c49aa15cd0cf2eff5fc5bbe2db4
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/py-r:python3.10.12-R4.2.3-IRkernel-ubuntu22.04
 
@@ -68,6 +68,9 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("units", "0.8-5")'
 
 RUN Rscript -e 'remotes::install_github( \
+        "AllenInstitute/scrattch.vis", \
+        ref = "e1a93534a6e7b65c93ff45da4b754c2dcc1e055c")' \
+    && Rscript -e 'remotes::install_github( \
         "ttecon/ttr", \
         ref = "52354d2f051b7c31b2ad8d9cb24cccded370b220")'
 

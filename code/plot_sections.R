@@ -18,12 +18,13 @@ options(scipen=9999)
 options(mc.cores=20)
 
 # read in old segmentation
-vpt <- read_h5ad("/data/VPT_processed_data/mouse_638850_processed_VPT.h5ad")
-
-metadata_vpt <- vpt$obs
+#vpt <- read_h5ad("/data/merscope_638850_mouseadult_processed_VPT/whole_dataset/mouse_638850_filtered.h5ad")
+#metadata_vpt <- vpt$obs
+#save(metadata_vpt, file = "/scratch/metadata_vpt.rda")
+load("/scratch/metadata_vpt.rda")
 
 # read in new segmentation
-sis <- read_h5ad("/data/SIS_processed_data/mouse_638850_processed_SIS.h5ad")
+sis <- read_h5ad("/data/merscope_638850_mouseadult_processed_SIS/whole_dataset/mouse_638850_filtered.h5ad")
 
 # extract coordinates and and add sections
 coordinates_sis <- as.matrix(sis$obsm$spatial_rotate)
@@ -78,4 +79,118 @@ ggsave(filename = "/results/example_sections.pdf",
        plot = combined_plot, 
        width = 10,
        height = 4, 
+       dpi = 160)
+
+
+
+# Define the coordinates for the rectangle
+xmin <- 500
+xmax <- 2000
+ymin <- 1500
+ymax <- 3000
+
+plot <- ggplot(subset(example_vpt, section == "1199650944"),
+       aes(x=corrected_x,
+           y=corrected_y,
+       )) +
+  geom_point(size=.5,stroke=0,shape=19, color = "grey") +
+  geom_rect(aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), 
+            fill = NA, color = "red", linewidth = 1) +  # Add open rectangle
+  coord_fixed() +
+  #scale_color_manual(values=CCF_regions_color) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none") +
+  theme_void()
+
+ggsave(filename = "/results/vpt_example_section_1199650944.png", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 160)
+
+high_zoom <- example_vpt %>% 
+  filter(section == "1199650944") %>% 
+  filter(corrected_x > xmin) %>% 
+  filter(corrected_x < xmax)%>% 
+  filter(corrected_y > ymin) %>% 
+  filter(corrected_y < ymax) 
+  
+
+plot <- ggplot(high_zoom,
+       aes(x=corrected_x,
+           y=corrected_y,
+       )) +
+  geom_point(size=1,stroke=0,shape=19, color = "grey") +
+  geom_rect(aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), 
+            fill = NA, color = "red", linewidth = 1) +  # Add open rectangle
+  coord_fixed() +
+  xlim(xmin,xmax) +
+  #scale_color_manual(values=CCF_regions_color) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none") +
+  theme_void()
+
+ggsave(filename = "/results/vpt_example_section_1199650944_zoom.png", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 160)
+
+
+
+# Define the coordinates for the rectangle
+xmin <- -3000
+xmax <- -1500
+ymin <- -1200
+ymax <- 300
+
+plot <- ggplot(subset(coordinates_sis, section == "1199650944"),
+               aes(x=x_coordinate,
+                   y=y_coordinate,
+               )) +
+  geom_point(size=.5,stroke=0,shape=19, color = "grey") +
+  geom_rect(aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), 
+            fill = NA, color = "red", linewidth = 1) +  # Add open rectangle
+  coord_fixed() +
+  #scale_color_manual(values=CCF_regions_color) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none") +
+  theme_void()
+
+ggsave(filename = "/results/sis_example_section_1199650944.png", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 160)
+
+high_zoom <- coordinates_sis %>% 
+  filter(section == "1199650944") %>% 
+  filter(x_coordinate > xmin) %>% 
+  filter(x_coordinate < xmax)%>% 
+  filter(y_coordinate > ymin) %>% 
+  filter(y_coordinate < ymax) 
+
+
+plot <- ggplot(high_zoom,
+               aes(x=x_coordinate,
+                   y=y_coordinate,
+               )) +
+  geom_point(size=1,stroke=0,shape=19, color = "grey") +
+  geom_rect(aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), 
+            fill = NA, color = "red", linewidth = 1) +  # Add open rectangle
+  coord_fixed() +
+  xlim(xmin,xmax) +
+  #scale_color_manual(values=CCF_regions_color) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none") +
+  theme_void()
+
+ggsave(filename = "/results/sis_example_section_1199650944_zoom.png", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
        dpi = 160)
