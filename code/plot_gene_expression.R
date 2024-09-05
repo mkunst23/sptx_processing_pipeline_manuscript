@@ -9,6 +9,7 @@ suppressPackageStartupMessages({
   library(ttr)
   library(data.table)
   library(scrattch.vis)
+  library(googlesheets4)
 })
 
 options(stringsAsFactors = FALSE)
@@ -128,7 +129,8 @@ subset_data <- data %>%
 
 # Subset count martrix to marker genes
 marker_genes_data <- subset_data %>% 
-  select(all_of(marker_genes))
+  select(sample_name,
+         all_of(marker_genes))
 
 group_violin_plot(marker_genes_data, 
                   filtered_metadata_vpt, 
