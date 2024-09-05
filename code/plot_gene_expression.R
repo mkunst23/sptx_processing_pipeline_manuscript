@@ -116,6 +116,7 @@ data <- rownames_to_column(data, var = "sample_name")
 
 # remove unnecessay datasets to save space
 rm(vpt)
+
 #rm(metadata_vpt)
 
 # Extract row names from metadata
@@ -129,10 +130,28 @@ subset_data <- data %>%
 marker_genes_data <- subset_data %>% 
   select(all_of(marker_genes))
 
-group_violin_plot(t(marker_genes_data), 
+group_violin_plot(marker_genes_data, 
                   filtered_metadata_vpt, 
                   genes = c("Slc17a7","Slc32a1","Mog"), 
                   grouping = "class", 
+                  log_scale = FALSE,
+                  font_size = 5,
+                  rotate_counts = TRUE)
+
+# run tasic 2016 example
+devtools::install_github("AllenInstitute/tasic2016data")
+library(tasic2016data)
+
+anno <- tasic_2016_anno
+anno <- anno[anno$primary_type_id > 0,]
+data_tasic <- tasic_2016_rpkm
+data_df <- cbind(sample_name = colnames(data_tasic),
+                 as.data.frame(t(data_tasic[c("Pvalb","Sst","Rorb"),])))
+
+group_violin_plot(data_df, 
+                  anno, 
+                  genes = c("Pvalb","Sst","Rorb"), 
+                  grouping = "primary_type", 
                   log_scale = FALSE,
                   font_size = 5,
                   rotate_counts = TRUE)
