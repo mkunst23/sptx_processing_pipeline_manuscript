@@ -27,6 +27,9 @@ gs4_deauth()
 # vasc: Igf2,Tbx3
 marker_genes <- c("Slc17a7","Slc17a6","Nrn1","Slc32a1","Gad2","Sox10","Mog","Aqp4","Gfap","Glis3","Arhgap15","Ctss","Igf2","Tbx3")
 
+# list of classes 
+class_list <- c("IT-ET Glut","CTX-CGE GABA","CTX-MGE GABA")
+
 anno <- read_sheet("https://docs.google.com/spreadsheets/d/1T86EppILF-Q97OjJyd4R2FjUmPUrdYBUEbbiXqgWEoE/edit?gid=674473196#gid=674473196",sheet = "cl.df.v9_230722")
 
 anno <- anno %>% 
@@ -118,7 +121,7 @@ filtered_metadata_vpt <- merge(filtered_metadata_vpt,
 load("/scratch/data_vpt.rda")
 
 # remove unnecessay datasets to save space
-rm(vpt)
+#rm(vpt)
 
 #rm(metadata_vpt)
 
@@ -143,8 +146,8 @@ plot_data_vpt <- subset_data_vpt %>%
   filter(sample_name %in% plot_anno_vpt$sample_name)
 
 
-group_violin_plot(subset_data_vpt, 
-                  filtered_metadata_vpt, 
+group_violin_plot(plot_data_vpt, 
+                  plot_anno_vpt, 
                   genes = c("Slc17a7","Slc17a6","Nrn1",
                             "Slc32a1","Gad2",
                             "Sox10","Mog",
@@ -194,19 +197,51 @@ rm(vpt_data_combined)
 ####################### process SIS data ##############################
 
 # load anndata file for vpt segmentaiton 
-sis <- read_h5ad("/data/merscope_638850_mouseadult_processed_SIS/whole_dataset/mouse_638850_filtered.h5ad")
-
+#sis <- read_h5ad("/data/merscope_638850_mouseadult_processed_SIS/whole_dataset/mouse_638850_filtered.h5ad")
 # extract metadata and keep only cell type assignment
 #metadata_sis <- sis$obs
 load("/scratch/metadata_sis.rda")
 
-
 filtered_metadata_sis <- metadata_sis %>%
   filter(final_filter == FALSE) %>%
-  select(CDM_cluster_name,
-         CDM_supertype_name,
-         CDM_subclass_name,
-         CDM_class_name)
+  select(flat_CDM_cluster_alias) 
+
+# Convert row names into a column
+filtered_metadata_sis <- rownames_to_column(filtered_metadata_sis, var = "sample_name")
+
+filtered_metadata_sis <- merge(filtered_metadata_sis,
+                               anno,
+                               by.x = "flat_CDM_cluster_alias",
+                               by.y = "cl",
+                               all.x = T,
+                               all.y = F)
+
+filtered_metadata_sis <- merge(filtered_metadata_sis,
+                               ColorPalCluster,
+                               by.x = "flat_CDM_cluster_alias",
+                               by.y = "cl",
+                               all.x = T,
+                               all.y = F)
+
+filtered_metadata_sis <- merge(filtered_metadata_sis,
+                               ColorPalSupert,
+                               by = "supertype_label",
+                               all.x = T,
+                               all.y = F)
+
+filtered_metadata_sis <- merge(filtered_metadata_sis,
+                               ColorPalSubclass,
+                               by = "subclass_label",
+                               all.x = T,
+                               all.y = F)
+
+filtered_metadata_sis <- merge(filtered_metadata_sis,
+                               ColorPalClass,
+                               by = "class_label",
+                               all.x = T,
+                               all.y = F)
+
+
 
 # extract count matrix and convert to data frame
 # data_sis <- sis$X
@@ -217,41 +252,40 @@ filtered_metadata_sis <- metadata_sis %>%
 load("/scratch/data_sis.rda")
 
 # remove unnecessay datasets to save space
-rm(sis)
+#rm(sis)
 
 # Extract row names from metadata
-cells_to_keep <- filtered_metadata_vpt$sample_name
+cells_to_keep <- filtered_metadata_sis$sample_name
 
 # Subset count matrix to high quality cells
-subset_data_vpt <- data_vpt %>% 
+subset_data_sis <- data_sis %>% 
   filter(sample_name %in% cells_to_keep)
 
 # Subset count martrix to marker genes
-marker_genes_data <- subset_data_vpt %>% 
+marker_genes_data <- subset_data_sis %>% 
   select(sample_name,
          all_of(marker_genes))
 
-# list of subclasses
+plot_anno_sis <-  filtered_metadata_sis %>% 
+  filter(class_label %in% class_list)
 
-plot_anno_vpt <-  filtered_metadata_vpt %>% 
-  filter(subclass_label == "Sncg Gaba")
-
-plot_data_vpt <- subset_data_vpt %>% 
-  filter(sample_name %in% plot_anno_vpt$sample_name)
+plot_data_sis <- subset_data_sis %>% 
+  filter(sample_name %in% plot_anno_sis$sample_name)
 
 
-group_violin_plot(subset_data_vpt, 
-                  filtered_metadata_vpt, 
+group_violin_plot(plot_data_sis, 
+                  plot_anno_sis, 
                   genes = c("Slc17a7","Slc17a6","Nrn1",
                             "Slc32a1","Gad2",
                             "Sox10","Mog",
                             "Aqp4","Gfap","Glis3",
                             "Igf2","Tbx3",
                             "Arhgap15","Ctss"), 
-                  grouping = "class", 
+                  grouping = "subclass", 
                   log_scale = FALSE,
                   font_size = 8,
                   rotate_counts = TRUE)
+
 
 ################### Combine datasets ####################
 sis_data_combined <- merge(filtered_metadata_sis,
