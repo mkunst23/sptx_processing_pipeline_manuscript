@@ -60,13 +60,14 @@ ColorPalClass <- ColorPalClass %>%
          class_id,
          class_color)
 
-####################### process SIS data ################
+####################### process VPT data ################
 
 # load anndata file for vpt segmentaiton 
-vpt <- read_h5ad("/data/merscope_638850_mouseadult_processed_VPT/whole_dataset/mouse_638850_filtered.h5ad")
+#vpt <- read_h5ad("/data/merscope_638850_mouseadult_processed_VPT/whole_dataset/mouse_638850_filtered.h5ad")
 
 # extract metadata and keep only cell type assignment
-metadata_vpt <- vpt$obs
+#metadata_vpt <- vpt$obs
+load("/scratch/metadata_vpt.rda")
 
 filtered_metadata_vpt <- metadata_vpt %>%
   filter(final_filter == FALSE) %>%
@@ -108,12 +109,13 @@ filtered_metadata_vpt <- merge(filtered_metadata_vpt,
                                all.y = F)
 
 
-
 # extract count matrix and convert to data frame
-data <- vpt$X
-data <- as.data.frame(data)
+# data_vpt <- vpt$X
+# data_vpt <- as.data.frame(data_vpt)
 # Convert row names into a column
-data <- rownames_to_column(data, var = "sample_name")
+# data_vpt <- rownames_to_column(data_vpt, var = "sample_name")
+# save(data_vpt, file = "/scratch/data_vpt.rda")
+load("/scratch/data_vpt.rda")
 
 # remove unnecessay datasets to save space
 rm(vpt)
@@ -124,42 +126,53 @@ rm(vpt)
 cells_to_keep <- filtered_metadata_vpt$sample_name
 
 # Subset count matrix to high quality cells
-subset_data <- data %>% 
+subset_data_vpt <- data_vpt %>% 
   filter(sample_name %in% cells_to_keep)
 
 # Subset count martrix to marker genes
-marker_genes_data <- subset_data %>% 
+marker_genes_data <- subset_data_vpt %>% 
   select(sample_name,
          all_of(marker_genes))
 
-group_violin_plot(marker_genes_data, 
+# list of subclasses
+
+plot_anno_vpt <-  filtered_metadata_vpt %>% 
+  filter(subclass_label == "Sncg Gaba")
+
+plot_data_vpt <- subset_data_vpt %>% 
+  filter(sample_name %in% plot_anno_vpt$sample_name)
+
+
+group_violin_plot(subset_data_vpt, 
                   filtered_metadata_vpt, 
-                  genes = c("Slc17a7","Slc32a1","Mog"), 
+                  genes = c("Slc17a7","Slc17a6","Nrn1",
+                            "Slc32a1","Gad2",
+                            "Sox10","Mog",
+                            "Aqp4","Gfap","Glis3",
+                            "Igf2","Tbx3",
+                            "Arhgap15","Ctss"), 
                   grouping = "class", 
                   log_scale = FALSE,
-                  font_size = 5,
-                  rotate_counts = TRUE)
-
-# run tasic 2016 example
-devtools::install_github("AllenInstitute/tasic2016data")
-library(tasic2016data)
-
-anno <- tasic_2016_anno
-anno <- anno[anno$primary_type_id > 0,]
-data_tasic <- tasic_2016_rpkm
-data_df <- cbind(sample_name = colnames(data_tasic),
-                 as.data.frame(t(data_tasic[c("Pvalb","Sst","Rorb"),])))
-
-group_violin_plot(data_df, 
-                  anno, 
-                  genes = c("Pvalb","Sst","Rorb"), 
-                  grouping = "primary_type", 
-                  log_scale = FALSE,
-                  font_size = 5,
+                  font_size = 8,
                   rotate_counts = TRUE)
 
 
-# Combine datasets
+group_heatmap_plot(subset_data_vpt, 
+                   filtered_metadata_vpt, 
+                   genes = c("Slc17a7","Slc17a6","Nrn1",
+                             "Slc32a1","Gad2",
+                             "Sox10","Mog",
+                             "Aqp4","Gfap","Glis3",
+                             "Igf2","Tbx3",
+                             "Arhgap15","Ctss"), 
+                   grouping = "class", 
+                   stat = "tmean",
+                   log_scale = TRUE,
+                   font_size = 8,
+                   rotate_counts = TRUE)
+
+################### prepare datasets for combining ######################
+
 vpt_data_combined <- merge(filtered_metadata_vpt,
                            marker_genes_data,
                            by = 0)
@@ -178,13 +191,16 @@ plot_data_vpt$tool <- "VPT"
 rm(vpt_data_combined)
 
 
-################## process SIS data ################
+####################### process SIS data ##############################
 
 # load anndata file for vpt segmentaiton 
 sis <- read_h5ad("/data/merscope_638850_mouseadult_processed_SIS/whole_dataset/mouse_638850_filtered.h5ad")
 
 # extract metadata and keep only cell type assignment
-metadata_sis <- sis$obs
+#metadata_sis <- sis$obs
+load("/scratch/metadata_sis.rda")
+
+
 filtered_metadata_sis <- metadata_sis %>%
   filter(final_filter == FALSE) %>%
   select(CDM_cluster_name,
@@ -193,24 +209,51 @@ filtered_metadata_sis <- metadata_sis %>%
          CDM_class_name)
 
 # extract count matrix and convert to data frame
-data <- sis$X
-data <- as.data.frame(data)
+# data_sis <- sis$X
+# data_sis <- as.data.frame(data_sis)
+# Convert row names into a column
+# data_sis <- rownames_to_column(data_sis, var = "sample_name")
+# save(data_sis, file = "/scratch/data_sis.rda")
+load("/scratch/data_sis.rda")
 
 # remove unnecessay datasets to save space
 rm(sis)
-rm(metadata_sis)
 
 # Extract row names from metadata
-row_names_to_keep <- rownames(filtered_metadata_sis)
+cells_to_keep <- filtered_metadata_vpt$sample_name
 
 # Subset count matrix to high quality cells
-subset_data <- data[row_names_to_keep, ]
+subset_data_vpt <- data_vpt %>% 
+  filter(sample_name %in% cells_to_keep)
 
 # Subset count martrix to marker genes
-marker_genes_data <- subset_data %>% 
-  select(all_of(marker_genes))
+marker_genes_data <- subset_data_vpt %>% 
+  select(sample_name,
+         all_of(marker_genes))
 
-# Combine datasets
+# list of subclasses
+
+plot_anno_vpt <-  filtered_metadata_vpt %>% 
+  filter(subclass_label == "Sncg Gaba")
+
+plot_data_vpt <- subset_data_vpt %>% 
+  filter(sample_name %in% plot_anno_vpt$sample_name)
+
+
+group_violin_plot(subset_data_vpt, 
+                  filtered_metadata_vpt, 
+                  genes = c("Slc17a7","Slc17a6","Nrn1",
+                            "Slc32a1","Gad2",
+                            "Sox10","Mog",
+                            "Aqp4","Gfap","Glis3",
+                            "Igf2","Tbx3",
+                            "Arhgap15","Ctss"), 
+                  grouping = "class", 
+                  log_scale = FALSE,
+                  font_size = 8,
+                  rotate_counts = TRUE)
+
+################### Combine datasets ####################
 sis_data_combined <- merge(filtered_metadata_sis,
                            marker_genes_data,
                            by = 0)
