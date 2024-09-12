@@ -152,7 +152,7 @@ plot <- ggplot(filtered_metadata_sis, aes(x = factor(1),
   labs(x = "", y = "#genes per cell") + # Customize axis labels
   theme_minimal() # Remove x-axis elements
 
-ggsave(filename = "/results/doublet_number_of_genes_qc.pdf", 
+ggsave(filename = "/results/doublet_number_of_genes_qc.png", 
        plot = plot, 
        width = 5,
        height = 10, 
@@ -178,7 +178,7 @@ plot <- ggplot(filtered_metadata_sis,
   labs(x = "", y = "# of total mRNA molecules per cell") + # Customize axis labels
   theme_minimal() # Remove x-axis elements
 
-ggsave(filename = "/results/number_of_spots_qc.png", 
+ggsave(filename = "/results/doublets_number_of_spots_qc.png", 
        plot = plot,
        width = 5,
        height = 10, 
