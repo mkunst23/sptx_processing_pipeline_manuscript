@@ -25,6 +25,12 @@ options(stringsAsFactors = FALSE)
 options(scipen=9999)
 options(mc.cores=30)
 
+filter_palette <- c("grey","red")
+
+example_sections = c("1199651009",
+                     "1199650956",
+                     "1199651045",
+                     "1199651112")
 
 # load corrected cell coordinates
 load("/scratch/coordinates_sis.rda")
@@ -38,7 +44,7 @@ metadata_sis <- merge(metadata_sis,
 
 # filter out relvevant columns
 filtered_metadata_sis <- metadata_sis %>% 
-  select(cell_label,
+  select(cell_id,
          x_coordinate,
          y_coordinate,
          volume,
@@ -67,12 +73,6 @@ filtered_metadata_sis <- metadata_sis %>%
          flat_CDM_cluster_avg_correlation,
          CDM_cluster_color)
 
-filter_palette <- c("grey","red")
-
-example_sections = c("1199651009",
-                     "1199650956",
-                     "1199651045",
-                     "1199651112")
 
 example_sections_plot <- filtered_metadata_sis %>% 
   filter(section %in% example_sections)
@@ -147,7 +147,7 @@ plot <- ggplot(filtered_metadata_sis,
   geom_hline(yintercept = spots_filter_threshold, 
              linetype = "dashed", 
              color = "black") +
-  coord_trans(y = "log2") +
+  coord_trans(y = "log10") +
   labs(x = "",
        y = "# of detected spots per cell") + 
   theme_minimal()
@@ -248,4 +248,139 @@ ggsave(filename = "/results/sections_blank_filter.pdf",
        plot = plot, 
        width = 5,
        height = 12, 
+       dpi = 300)
+
+############### plot volume distribution ####################
+
+plot <- ggplot(filtered_metadata_sis,
+               aes(x = factor(1),
+                   y = volume)) +
+  geom_violin(fill = "red") +
+  geom_boxplot(width = .2,
+               alpha = .6,
+               fatten = NULL,
+               show.legend = F) +
+  stat_summary(fun = "median",
+               show.legend = F,
+               position = position_dodge(.2)) +
+  # geom_hline(yintercept = spots_filter_threshold, 
+  #            linetype = "dashed", 
+  #            color = "black") +
+  #coord_trans(y = "log10") +
+  labs(x = "",
+       y = "# of detected spots per cell") + 
+  theme_minimal()
+
+
+ggsave(filename = "/results/distribution_volume.pdf", 
+       plot = plot, 
+       width = 5,
+       height = 8, 
+       dpi = 300)
+
+############### plot distributions of qc criteria in vpt segmented cells ##########
+
+# load data segmented with vpt cellpose model
+load("/scratch/metadata_vpt.rda")
+
+filtered_metadata_vpt <- metadata_vpt %>% 
+  select(cell_label,
+         volume,
+         section,
+         n_genes_by_counts,
+         total_counts,
+         total_counts_Blank,
+         pct_counts_Blank,
+         genes_filter,
+         mrna_lower_filter,
+         mrna_upper_filter,
+         blanks_filter,
+         basic_qc_filter)
+
+################### plot gene filter #####################
+
+genes_filter_threshold <- 15
+
+plot <- ggplot(filtered_metadata_vpt,
+               aes(x = factor(1),
+                   y = n_genes_by_counts)) +
+  geom_violin(fill = "red") +
+  geom_boxplot(width = .05,
+               alpha = .6,
+               fatten = NULL,
+               show.legend = F) +
+  stat_summary(fun = "median",
+               show.legend = F,
+               position = position_dodge(.2)) +
+  geom_hline(yintercept = genes_filter_threshold, 
+             linetype = "dashed", 
+             color = "black") +
+  labs(x = "",
+       y = "# of detected genes per cell") + 
+  theme_minimal()
+
+ggsave(filename = "/results/distribution_genes_filter_vpt.pdf", 
+       plot = plot, 
+       width = 5,
+       height = 8, 
+       dpi = 300)
+
+################### plot spot filter ##################
+
+spots_filter_threshold <- 40
+
+plot <- ggplot(filtered_metadata_vpt,
+               aes(x = factor(1),
+                   y = (total_counts + 1))) +
+  geom_violin(fill = "red") +
+  geom_boxplot(width = .2,
+               alpha = .6,
+               fatten = NULL,
+               show.legend = F) +
+  stat_summary(fun = "median",
+               show.legend = F,
+               position = position_dodge(.2)) +
+  geom_hline(yintercept = spots_filter_threshold, 
+             linetype = "dashed", 
+             color = "black") +
+  coord_trans(y = "log2") +
+  labs(x = "",
+       y = "# of detected spots per cell") + 
+  theme_minimal()
+
+
+ggsave(filename = "/results/distribution_spots_filter_vpt.pdf", 
+       plot = plot, 
+       width = 5,
+       height = 8, 
+       dpi = 300)
+
+###################### plot volume filter #####################
+
+gene_volume_threshold <- 100
+
+plot <- ggplot(filtered_metadata_vpt,
+               aes(x = factor(1),
+                   y = volume)) +
+  geom_violin(fill = "red") +
+  geom_boxplot(width = .2,
+               alpha = .6,
+               fatten = NULL,
+               show.legend = F) +
+  stat_summary(fun = "median",
+               show.legend = F,
+               position = position_dodge(.2)) +
+  geom_hline(yintercept = gene_volume_threshold,
+             linetype = "dashed",
+             color = "black") +
+  #coord_trans(y = "log10") +
+  labs(x = "",
+       y = "cell volumes") + 
+  theme_minimal()
+
+
+ggsave(filename = "/results/distribution_volume_vpt.pdf", 
+       plot = plot, 
+       width = 5,
+       height = 8, 
        dpi = 300)
