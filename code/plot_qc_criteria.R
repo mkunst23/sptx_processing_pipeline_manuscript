@@ -123,7 +123,7 @@ plot <- ggplot(example_sections_plot,
   theme_void() +
   theme(strip.text = element_blank())
 
-ggsave(filename = "/results/sections_genes_filter.pdf", 
+ggsave(filename = "/results/sections_genes_filter.png", 
        plot = plot, 
        width = 5,
        height = 15, 
@@ -153,7 +153,7 @@ plot <- ggplot(filtered_metadata_sis,
   theme_minimal()
 
 
-ggsave(filename = "/results/distribution_spots_filter.pdf", 
+ggsave(filename = "/results/distribution_spots_filter.png", 
        plot = plot, 
        width = 5,
        height = 8, 
@@ -179,7 +179,7 @@ plot <- ggplot(example_sections_plot,
   theme(strip.text = element_blank())
 
 
-ggsave(filename = "/results/sections_spots_filter.pdf", 
+ggsave(filename = "/results/sections_spots_filter.png", 
        plot = plot, 
        width = 5,
        height = 12, 
@@ -244,7 +244,7 @@ plot <- ggplot(example_sections_plot_2,
   theme(strip.text = element_blank())
 
 
-ggsave(filename = "/results/sections_blank_filter.pdf", 
+ggsave(filename = "/results/sections_blank_filter.png", 
        plot = plot, 
        width = 5,
        height = 12, 
@@ -349,7 +349,7 @@ plot <- ggplot(filtered_metadata_vpt,
   theme_minimal()
 
 
-ggsave(filename = "/results/distribution_spots_filter_vpt.pdf", 
+ggsave(filename = "/results/distribution_spots_filter_vpt.png", 
        plot = plot, 
        width = 5,
        height = 8, 
