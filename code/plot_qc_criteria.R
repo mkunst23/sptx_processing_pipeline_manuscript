@@ -42,9 +42,12 @@ metadata_sis <- merge(metadata_sis,
                       coordinates_sis,
                       by = 0)
 
+metadata_sis <- metadata_sis %>% 
+  rownames_to_column( var = "cell_label")
+
 # filter out relvevant columns
 filtered_metadata_sis <- metadata_sis %>% 
-  select(cell_id,
+  select(cell_label,
          x_coordinate,
          y_coordinate,
          volume,
@@ -99,7 +102,7 @@ plot <- ggplot(filtered_metadata_sis,
        y = "# of detected genes per cell") + 
   theme_minimal()
 
-ggsave(filename = "/results/distribution_genes_filter.pdf", 
+ggsave(filename = "/results/distribution_genes_filter.png", 
        plot = plot, 
        width = 5,
        height = 8, 
@@ -213,7 +216,7 @@ plot <- ggplot(filtered_metadata_sis_2,
   theme_minimal()
 
 
-ggsave(filename = "/results/distribution_blank_filter.pdf", 
+ggsave(filename = "/results/distribution_blank_filter.png", 
        plot = plot, 
        width = 5,
        height = 8, 
@@ -272,7 +275,7 @@ plot <- ggplot(filtered_metadata_sis,
   theme_minimal()
 
 
-ggsave(filename = "/results/distribution_volume.pdf", 
+ggsave(filename = "/results/distribution_volume.png", 
        plot = plot, 
        width = 5,
        height = 8, 
@@ -319,7 +322,7 @@ plot <- ggplot(filtered_metadata_vpt,
        y = "# of detected genes per cell") + 
   theme_minimal()
 
-ggsave(filename = "/results/distribution_genes_filter_vpt.pdf", 
+ggsave(filename = "/results/distribution_genes_filter_vpt.png", 
        plot = plot, 
        width = 5,
        height = 8, 
@@ -379,7 +382,7 @@ plot <- ggplot(filtered_metadata_vpt,
   theme_minimal()
 
 
-ggsave(filename = "/results/distribution_volume_vpt.pdf", 
+ggsave(filename = "/results/distribution_volume_vpt.png", 
        plot = plot, 
        width = 5,
        height = 8, 
