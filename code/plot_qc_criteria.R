@@ -122,7 +122,7 @@ plot <- ggplot(example_sections_plot,
   scale_y_reverse() +
   theme(legend.position = "none") +
   guides(color = "none") +
-  facet_wrap(~fct_rev(section), ncol = 1) +
+  facet_wrap(~fct_rev(section), nrow = 1) +
   theme_void() +
   theme(strip.text = element_blank())
 
@@ -177,7 +177,7 @@ plot <- ggplot(example_sections_plot,
   scale_y_reverse() +
   theme(legend.position = "none") +
   guides(color = "none") +
-  facet_wrap(~fct_rev(section), ncol = 1) +
+  facet_wrap(~fct_rev(section), nrow = 1) +
   theme_void() +
   theme(strip.text = element_blank())
 
@@ -242,7 +242,7 @@ plot <- ggplot(example_sections_plot_2,
   scale_y_reverse() +
   theme(legend.position = "none") +
   guides(color = "none") +
-  facet_wrap(~fct_rev(section), ncol = 1) +
+  facet_wrap(~fct_rev(section), nrow = 1) +
   theme_void() +
   theme(strip.text = element_blank())
 

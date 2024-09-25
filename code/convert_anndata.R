@@ -16,7 +16,7 @@ options(stringsAsFactors = FALSE)
 options(scipen=9999)
 options(mc.cores=30)
 
-sis <- read_h5ad("/data/merscope_638850_mouseadult_processed/whole_dataset/mouse_638850_filtered.h5ad")
+sis <- read_h5ad("/data/merscope_638850_mouseadult_processed/whole_dataset/mouse_687997_filtered.h5ad")
 metadata_sis <- sis$obs
 save(metadata_sis, file = "/scratch/metadata_sis.rda")
 

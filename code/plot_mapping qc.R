@@ -102,8 +102,6 @@ section_threshold <- filtered_metadata_sis %>%
   unique() %>% 
   arrange(flat_CDM_supertype_name)
 
-section_threshold[2,2]
-
 
 # plot distribution of correlation coefficients for selected 
 plot <- ggplot(filtered_metadata_sis,
@@ -164,33 +162,35 @@ plot <- ggplot(filtered_metadata_sis,
                    y = section_threshold[8,2],
                    yend = section_threshold[8,2],
                    color = "red")) +
-  geom_segment(aes(x =8.5, 
-                   xend = 9.5,
+  geom_segment(aes(x =8.75, 
+                   xend = 9.25,
                    y = section_threshold[9,2],
                    yend = section_threshold[9,2],
                    color = "red")) +
-  geom_segment(aes(x =9.5, 
-                   xend = 10.5,
+  geom_segment(aes(x =9.75, 
+                   xend = 10.25,
                    y = section_threshold[10,2],
                    yend = section_threshold[10,2],
                    color = "red")) +
-  geom_segment(aes(x =10.5, 
-                   xend = 11.5,
+  geom_segment(aes(x =10.75, 
+                   xend = 11.25,
                    y = section_threshold[11,2],
                    yend = section_threshold[11,2],
                    color = "red")) +
-  geom_segment(aes(x =11.5, 
-                   xend = 12.5,
+  geom_segment(aes(x =11.75, 
+                   xend = 12.25,
                    y = section_threshold[12,2],
                    yend = section_threshold[12,2],
                    color = "red")) +
-  geom_segment(aes(x =12.5, 
-                   xend = 13.5,
+  geom_segment(aes(x =12.75, 
+                   xend = 13.25,
                    y = section_threshold[13,2],
                    yend = section_threshold[13,2],
                    color = "red")) +
   theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1),
+        legend.position = "none")
 
 
 ggsave(filename = "/results/mapping_filter.pdf", 
@@ -198,3 +198,32 @@ ggsave(filename = "/results/mapping_filter.pdf",
        width = 10,
        height = 7, 
        dpi = 300)
+
+# supertype:0023 L4/5 IT CTX Glut_1
+# sections: 1199651075 1199651106 1199651057
+
+# supertype: 1076 NLL Gata3 Gly-Gaba_3
+# sections: 1199650981 1199650978 1199650975
+
+
+
+example_sections_plot <- filtered_metadata_sis %>% 
+  filter(section %in% example_sections)
+
+ggplot(example_sections_plot,
+       aes(x=x_coordinate,
+           y=y_coordinate,
+           color = flat_CDM_supertype_name,
+           alpha = flat_CDM_cluster_thr_criteria
+       )) +
+  geom_point(size=.5,stroke=0,shape=19,) +
+  coord_fixed() +
+  ggtitle("Gene Filter") +
+  scale_color_manual(values = supertype_color_palette) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  scale_alpha_manual(values = c(0.5, 1)) +
+  guides(color = "none") +
+  facet_wrap(~fct_rev(section), ncol = 1) +
+  theme_void() +
+  theme(strip.text = element_blank())
