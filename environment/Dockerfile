@@ -1,4 +1,4 @@
-# hash:sha256:517fe836d288d9355e9d553ce5891d2ae59e6c49aa15cd0cf2eff5fc5bbe2db4
+# hash:sha256:8f5c769d53906640304d85b4a26b8eba9187dd476cea345ec66648dc72171b6f
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/py-r:python3.10.12-R4.2.3-IRkernel-ubuntu22.04
 
@@ -17,6 +17,10 @@ RUN apt-get update \
         libx11-dev=2:1.7.5-1ubuntu0.3 \
     && rm -rf /var/lib/apt/lists/*
 
+RUN conda install -y \
+        r-vegan==2.6_6.1 \
+    && conda clean -ya
+
 RUN pip install -U --no-cache-dir \
     matplotlib==3.9.2 \
     numpy==1.26.4 \
@@ -28,6 +32,7 @@ RUN pip install -U --no-cache-dir \
 ARG RCACHE_OPTIONS
 RUN echo $RCACHE_OPTIONS >> $(Rscript -e 'cat(R.home())')/etc/Rprofile.site
 RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
+    && Rscript -e 'remotes::install_version("DescTools", "0.99.57")' \
     && Rscript -e 'remotes::install_version("Rvcg", "0.23")' \
     && Rscript -e 'remotes::install_version("alphashape3d", "1.3.2")' \
     && Rscript -e 'remotes::install_version("anndata", "0.7.5.6")' \
@@ -46,6 +51,7 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("ggplot2", "3.5.1")' \
     && Rscript -e 'remotes::install_version("ggraph", "2.2.1")' \
     && Rscript -e 'remotes::install_version("ggrastr", "1.0.2")' \
+    && Rscript -e 'remotes::install_version("ggridges", "0.5.6")' \
     && Rscript -e 'remotes::install_version("googlesheets4", "1.1.1")' \
     && Rscript -e 'remotes::install_version("graphlayouts", "1.1.1")' \
     && Rscript -e 'remotes::install_version("gridExtra", "2.3")' \
@@ -58,9 +64,11 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("philentropy", "0.8.0")' \
     && Rscript -e 'remotes::install_version("randomcoloR", "1.1.0.1")' \
     && Rscript -e 'remotes::install_version("rearrr", "0.3.4")' \
+    && Rscript -e 'remotes::install_version("reshape", "0.8.9")' \
     && Rscript -e 'remotes::install_version("reticulate", "1.38.0")' \
     && Rscript -e 'remotes::install_version("rjson", "0.2.9")' \
     && Rscript -e 'remotes::install_version("s2", "1.1.7")' \
+    && Rscript -e 'remotes::install_version("scales", "1.3.0")' \
     && Rscript -e 'remotes::install_version("sjmisc", "2.8.10")' \
     && Rscript -e 'remotes::install_version("stringr", "1.5.1")' \
     && Rscript -e 'remotes::install_version("tibble", "3.2.1")' \
