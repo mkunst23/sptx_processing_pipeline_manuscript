@@ -173,7 +173,7 @@ proportion_colors <- c('#005DFFFF',
 ############## process metadata file ####################
 
 # read in metadata file
-load("/scratch/638850_metadata_sis.rda")
+load("/scratch/687997_metadata_sis.rda")
 
 metadata_sis <- metadata_sis %>%
   mutate(temp = flat_CDM_class_name) %>%
@@ -216,7 +216,7 @@ metadata_sis <- merge(metadata_sis,
 
 metadata_subset <- metadata_sis %>% 
   filter(final_filter == F) %>% 
-  select(cell_id,
+  select(cells,
          section,
          leiden_res_1.2_knn_8,
          flat_CDM_class_name,
@@ -554,4 +554,354 @@ clplot <- ggplot(data=hm_sc) +
         axis.text.x = element_text(angle = 45, 
                                    hjust = 1),
         legend.position = "right")
+
+cols <- setNames(class_colors$class_color, 
+                 class_colors$class_id_label)
+
+clplot <- ggplot(data=hm_sc) + 
+  geom_tile(aes(x=flat_CDM_subclass_name, y=1, fill=flat_CDM_class_name)) +
+  scale_fill_manual(values=cols, name = "Class", limits = force) +
+  theme_void() +
+  ylab( "Class") +
+  theme(axis.title.y = element_text(size=8, 
+                                    hjust=1, 
+                                    vjust=0.5),
+        axis.text.x = element_text(angle = 45, 
+                                   hjust = 1),
+        legend.position = "right")
+
+# reorder region mapping
+region.mapping$CCF_level2 <- factor(region.mapping$CCF_level2, 
+                                    levels = fct_rev(region.mapping$CCF_level2))
+
+# code to plot bar graphs for brain regions
+ccfplot <- ggplot(data=region.mapping) + 
+  geom_tile(aes(y=fct_rev(CCF_level2), 
+                x=1, fill=CCF_level1)) +
+  scale_fill_manual(values=CCF_regions_color, 
+                    name = "CCF", 
+                    limits = force) +
+  #theme_void() +
+  theme(panel.background = element_blank(),
+        axis.text.x=element_blank(), #remove x axis labels
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.title.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        legend.position = "none")
+
+ylabs <- unique(for_heatmap[,c("CCF_level1",
+                               "CCF_level2")])
+ylabs$y <- 1:nrow(ylabs)
+
+ylabs.2 = ylabs %>%
+  group_by(grp = rleid(CCF_level1), 
+           CCF_level1) %>%    
+  summarise(y = round((min(y)+ max(y))/2 )) %>% 
+  left_join(select(ylabs, y, CCF_level2))
+
+# Broad regions
+lab2 <- ggplot(data=ylabs.2, aes(y=CCF_level2, 
+                                 x=-50, 
+                                 label = CCF_level1)) +   
+  geom_text(hjust=1.0,
+            vjust=0.5,
+            size=3) +
+  theme_void()+
+  coord_cartesian( clip = "off") 
+
+###################### calculate gini coefficient for subclass ########################
+gini_coefficient <- apply(subclass_per_region[,-1], 1, calcGini)
+names(gini_coefficient) <- subclass_per_region$flat_CDM_subclass_name
+gini_coefficient <- as.data.frame(gini_coefficient)
+
+cell_count <- rowSums(subclass_per_region[,-1])
+names(cell_count) <- subclass_per_region$flat_CDM_subclass_name
+cell_count <- as.data.frame(cell_count)
+
+subclass_meta <- merge(gini_coefficient,
+                       cell_count,
+                       by=0)
+
+colnames(subclass_meta)[1] <- "flat_CDM_subclass_name"
+
+subclass_meta <- merge(subclass_meta,
+                       add.meta,
+                       by = "flat_CDM_subclass_name",
+                       all.x = T,
+                       all.y = F)
+
+subclass_meta$name <- "Name"
+
+subclass_meta$flat_CDM_subclass_name <- factor(subclass_meta$flat_CDM_subclass_name, 
+                                          levels = add.meta$flat_CDM_subclass_name)
+
+subclass_cell_count <- ggplot(subclass_meta, 
+                              aes(x = flat_CDM_subclass_name, 
+                                  y = log10(cell_count))) +
+  geom_bar(stat = "identity", fill = "Grey") +
+  ylab( "cells per subclass") +
+  theme(
+    panel.background = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    #axis.ticks.y=element_blank(),
+    #axis.text.y = element_blank(),
+    axis.title.y=element_blank(),
+    legend.position = "none"
+  )
+
+
+# calculate normalized gini coefficient
+gini_coefficient_norm <- apply(subclass_per_region_norm, 1, calcGini)
+gini_coefficient_norm <- as.data.frame(gini_coefficient_norm)
+colnames(gini_coefficient_norm)[1] <- "gini_coefficient_norm"
+gini_coefficient_norm <- gini_coefficient_norm %>% 
+  tibble::rownames_to_column(var = "flat_CDM_subclass_name")
+
+
+subclass_meta <- merge(subclass_meta,
+                       gini_coefficient_norm,
+                       by = "flat_CDM_subclass_name",
+                       all.x = T,
+                       all.y = T)
+
+subclass_meta$flat_CDM_subclass_name <- factor(subclass_meta$flat_CDM_subclass_name, 
+                                          levels = add.meta$flat_CDM_subclass_name)
+
+subclass_meta_long <- tidyr::gather(subclass_meta, 
+                                    key = "flat_CDM_subclass_name", 
+                                    value = "value", 
+                                    -gini_coefficient_norm, 
+                                    -cell_count)
+
+###################### calculate gini coefficient for supertypes ########################
+gini_coefficient_st <- apply(supertype_per_region[,-1], 1, calcGini)
+names(gini_coefficient_st) <- supertype_per_region$flat_CDM_supertype_name
+gini_coefficient_st <- as.data.frame(gini_coefficient_st)
+
+cell_count_st <- rowSums(supertype_per_region[,-1])
+names(cell_count_st) <- supertype_per_region$flat_CDM_supertype_name
+cell_count_st <- as.data.frame(cell_count_st)
+
+supertype_meta <- merge(gini_coefficient_st,
+                        cell_count_st,
+                        by=0)
+
+colnames(supertype_meta)[1] <- "flat_CDM_supertype_name"
+
+supertype_meta <- merge(supertype_meta,
+                        add.meta_st,
+                        by = "flat_CDM_supertype_name",
+                        all.x = T,
+                        all.y = F)
+
+
+supertype_meta$name <- "Name"
+
+# calculate normalized gini coefficient
+gini_coefficient_norm_st <- apply(supertype_per_region_norm, 1, calcGini)
+gini_coefficient_norm_st <- as.data.frame(gini_coefficient_norm_st)
+colnames(gini_coefficient_norm_st)[1] <- "gini_coefficient_norm"
+gini_coefficient_norm_st <- gini_coefficient_norm_st %>% 
+  tibble::rownames_to_column(var = "flat_CDM_supertype_name")
+
+
+supertype_meta <- merge(supertype_meta,
+                        gini_coefficient_norm_st,
+                        by = "flat_CDM_supertype_name",
+                        all.x = T,
+                        all.y = T)
+
+supertype_meta$flat_CDM_supertype_name <- factor(supertype_meta$flat_CDM_supertype_name, 
+                                                 levels = add.meta_st$flat_CDM_supertype_name)
+
+################# plot distribution for a gini coefficient ###################
+gini_colors <- paletteer_c("grDevices::terrain.colors", 30)
+
+gini_distribution <- ggplot(subclass_meta, 
+                            aes(x = gini_coefficient_norm, 
+                                y = name, 
+                                fill = after_stat(x))) +
+  geom_density_ridges_gradient() +
+  theme_minimal() +
+  scale_fill_gradientn(colors = gini_colors)
+
+gini_distribution_st <- ggplot(supertype_meta, 
+                               aes(x = gini_coefficient_norm, 
+                                   y = name, 
+                                   fill = after_stat(x))) +
+  geom_density_ridges_gradient() +
+  theme_minimal() +
+  scale_fill_gradientn(colors = gini_colors)
+
+gini_plot <- ggplot(data=subclass_meta_long) + 
+  geom_tile(aes(x=value, 
+                y=flat_CDM_subclass_name, 
+                fill=gini_coefficient_norm)) +
+  scale_fill_gradientn(colors = gini_colors) +
+  theme_void() +
+  ylab( "Gini coefficient") +
+  theme(axis.title.y = element_text(size=8, 
+                                    hjust=1, 
+                                    vjust=0.5),
+        legend.position = "right")
+
+cols <- setNames(class_colors$class_color, 
+                 class_colors$class_id_label)
+
+gini_distribution_class <- ggplot(subclass_meta, 
+                                  aes(x = gini_coefficient_norm, 
+                                      y = flat_CDM_class_name, 
+                                      fill = flat_CDM_class_name)) +
+  geom_density_ridges(alpha = 0.7) +
+  scale_fill_manual(values=cols) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+cols <- setNames(class_colors$class_color, 
+                 class_colors$class_id_label)
+
+st_gini_distribution_class <- ggplot(supertype_meta, 
+                                     aes(x = gini_coefficient_norm, 
+                                         y = flat_CDM_class_name, 
+                                         fill = flat_CDM_class_name)) +
+  geom_density_ridges(alpha = 0.7) +
+  scale_fill_manual(values=cols) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+############# calculate shannon diversity for subclasses ###################
+subclass_abundance <- subclass_per_region[, 2:ncol(subclass_per_region)]
+
+shann_d_values <- subclass_per_region %>%
+  column_to_rownames(var = "flat_CDM_subclass_name") %>%
+  summarise(across(everything(),
+                   vegan::diversity,
+                   index = "shannon")) %>%
+  as.data.frame() %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "CCF_level2")
+
+colnames(shann_d_values)[2] <- "sd_index"
+
+shann_d_values$normalized_shannon <- shann_d_values$sd_index / log(ncol(subclass_abundance))
+
+shann_d_values <- merge(shann_d_values,
+                        region.mapping,
+                        by = "CCF_level2",
+                        all.x = T,
+                        all.y = F)
+
+shann_d_values$CCF_level2 <- factor(shann_d_values$CCF_level2, 
+                                    levels = fct_rev(region.mapping$CCF_level2))
+
+shann_d_values$name <- "Name"
+
+############# calculate shannon diversity for supertypes ###################
+supertype_abundance <- supertype_per_region[, 2:ncol(subclass_per_region)]
+
+shann_d_values_st <- supertype_per_region %>%
+  column_to_rownames(var = "flat_CDM_supertype_name") %>%
+  summarise(across(everything(),
+                   vegan::diversity,
+                   index = "shannon")) %>%
+  as.data.frame() %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "CCF_level2")
+
+colnames(shann_d_values_st)[2] <- "sd_index"
+
+shann_d_values_st$normalized_shannon <- shann_d_values_st$sd_index / log(ncol(supertype_abundance))
+
+shann_d_values_st <- merge(shann_d_values_st,
+                           region.mapping,
+                           by = "CCF_level2",
+                           all.x = T,
+                           all.y = F)
+
+shann_d_values_st$CCF_level2 <- factor(shann_d_values_st$CCF_level2, 
+                                       levels = fct_rev(region.mapping$CCF_level2))
+
+shann_d_values_st$name <- "Name"
+
+#################### plot shannon diverity ##########################
+
+shannon_colors <- paletteer_c("ggthemes::Orange-Blue Diverging", 30, direction = -1)
+
+shann_d_distribution <- ggplot(shann_d_values, 
+                               aes(x = sd_index, 
+                                   y = name, 
+                                   fill = after_stat(x))) +
+  geom_density_ridges_gradient() +
+  theme_minimal() +
+  scale_fill_gradientn(colors = shannon_colors)
+
+shann_d_values$CCF_level1 <- factor(shann_d_values$CCF_level1, 
+                                    levels = region.mapping_broad$CCF_level1)
+
+# split up by CCF_level1 (change order)
+shann_d_distribution_ccf <- ggplot(shann_d_values, 
+                                   aes(x = sd_index, 
+                                       y = CCF_level1, 
+                                       fill = CCF_level1)) +
+  geom_density_ridges(alpha = 0.7) +
+  scale_fill_manual(values = CCF_regions_color) +
+  xlim(1, 5) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+shann_d_values_st$CCF_level1 <- factor(shann_d_values_st$CCF_level1, 
+                                       levels = region.mapping_broad$CCF_level1)
+
+# split up by CCF_level1 (change order)
+shann_d_distribution_ccf_st <- ggplot(shann_d_values_st, 
+                                      aes(x = sd_index, 
+                                          y = CCF_level1, 
+                                          fill = CCF_level1)) +
+  geom_density_ridges(alpha = 0.7) +
+  scale_fill_manual(values = CCF_regions_color) +
+  xlim(1, 5) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+shannon_plot <- ggplot(data=shann_d_values) +
+  geom_tile(aes(y=fct_rev(CCF_level2), 
+                x=1, 
+                fill=sd_index)) +
+  scale_fill_gradientn(colors = shannon_colors) +
+  theme_void() +
+  theme(legend.position = "right")
+
+shannon_plot_st <- ggplot(data=shann_d_values_st) +
+  geom_tile(aes(y=fct_rev(CCF_level2), 
+                x=1, 
+                fill=sd_index)) +
+  scale_fill_gradientn(colors = shannon_colors) +
+  theme_void() +
+  theme(legend.position = "right")
+
+################## make final plot ###################
+
+final_subclass_dominance <- subclass_dominance %>%
+  insert_bottom(l2plot, height = 0.03) %>%
+  insert_bottom(clplot, height = 0.03) %>%
+  insert_left(E_I_level_2, width=0.06) %>% 
+  insert_left(N_G_level_2, width=0.04) %>% 
+  insert_left(ccfplot, width=0.01) %>%
+  #insert_left(lab2, width = 0.2) %>% 
+  insert_top(gini_plot,height = 0.03) %>% 
+  insert_top(subclass_cell_count,height = 0.03) %>% 
+  insert_right(shannon_plot, width=0.02) %>%
+  insert_right(shannon_plot_st, width=0.02) %>%
+  insert_right(region_cell_count, width=0.06)
+
+
+final_subclass_dominance
+
+########################### Jensen-shannon divergence ##########################
 
