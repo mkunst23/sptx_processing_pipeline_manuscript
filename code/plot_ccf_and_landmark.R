@@ -96,7 +96,7 @@ plot <- ggplot(subset(metadata_subset, spatial_domain_level_1 != "LQ"),
                    y=volume_y,
                    color = leiden_res_1.2_knn_8
                )) +
-  geom_point(size=.1,stroke=0,shape=19,) +
+  geom_point(size=.5,stroke=0,shape=19,) +
   coord_fixed() +
   ggtitle("Spatial Domains") +
   scale_color_manual(values=leiden_cluster_palette) +
@@ -118,9 +118,9 @@ plot <- ggplot(subset(metadata_subset, spatial_domain_level_1 != "LQ"),
            y=volume_y,
            color = ccf_broad
        )) +
-  geom_point(size=.1,stroke=0,shape=19,) +
+  geom_point(size=.5,stroke=0,shape=19,) +
   coord_fixed() +
-  ggtitle("Spatial Domains") +
+  ggtitle("Broad Regions") +
   scale_color_manual(values=ccf_broad_palette) +
   scale_y_reverse() +
   theme(legend.position = "none") +
@@ -140,9 +140,9 @@ plot <- ggplot(subset(metadata_subset, registration_landmark!= "NA"),
            y=volume_y,
            color = flat_CDM_cluster_name
        )) +
-  geom_point(size=.1,stroke=0,shape=19,) +
+  geom_point(size=.5,stroke=0,shape=19,) +
   coord_fixed() +
-  ggtitle("Spatial Domains") +
+  ggtitle("Cell Types") +
   scale_color_manual(values=cluster_color_palette) +
   scale_y_reverse() +
   theme(legend.position = "none") +
@@ -162,7 +162,7 @@ plot <- ggplot(subset(metadata_subset, registration_landmark!= "NA"),
            y=volume_y,
            color = registration_landmark
        )) +
-  geom_point(size=.1,stroke=0,shape=19,) +
+  geom_point(size=.5,stroke=0,shape=19,) +
   coord_fixed() +
   ggtitle("CCF landmarks") +
   scale_color_manual(values=ccf_landmark_palette) +
