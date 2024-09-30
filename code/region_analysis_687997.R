@@ -173,7 +173,7 @@ proportion_colors <- c('#005DFFFF',
 ############## process metadata file ####################
 
 # read in metadata file
-load("/scratch/638850_metadata_sis.rda")
+load("/scratch/687997_metadata_sis.rda")
 
 metadata_sis <- metadata_sis %>%
   mutate(temp = flat_CDM_class_name) %>%
@@ -216,7 +216,7 @@ metadata_sis <- merge(metadata_sis,
 
 metadata_subset <- metadata_sis %>% 
   filter(final_filter == F) %>% 
-  select(cell_id,
+  select(cells,
          section,
          leiden_res_1.2_knn_8,
          flat_CDM_class_name,
