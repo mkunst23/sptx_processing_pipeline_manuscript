@@ -77,6 +77,7 @@ filtered_metadata_sis <- metadata_sis %>%
          basic_qc_filter,
          doublets_filter,
          final_filter,
+         is_bimodal_cluster,
          flat_CDM_class_name,
          flat_CDM_class_avg_correlation,
          CDM_class_color,
@@ -199,31 +200,220 @@ ggsave(filename = "/results/mapping_filter.pdf",
        height = 7, 
        dpi = 300)
 
-# supertype:0023 L4/5 IT CTX Glut_1
-# sections: 1199651075 1199651106 1199651057
 
-# supertype: 1076 NLL Gata3 Gly-Gaba_3
-# sections: 1199650981 1199650978 1199650975
+####### plot example sections with old and new filtering threshold #############
+
+# example for initual threshold to high
+# supertype: 0682 RN Spp1 Glut_1
+# sections: 1199651021 1199651018 1199651015 1199650962
+
+cluster_to_plot <- "0682 RN Spp1 Glut_1"
+example_sections <- c("1199651021","1199651018","1199651015","1199650965")
+
+classifier_palette <- c("lightgrey","black","red")
+
+threshold <- 0.5
+
+example_sections_plot <- metadata_sis %>%
+  filter(basic_qc_filter == F) %>% 
+  filter(doublets_filter == F) %>%
+  filter(section %in% example_sections) %>% 
+  select(x_coordinate,
+         y_coordinate,
+         section,
+         flat_CDM_supertype_name,
+         flat_CDM_cluster_avg_correlation,
+         flat_CDM_cluster_thr)
+
+# Create the classifier column
+example_sections_plot <- example_sections_plot %>%
+  mutate(classifier = case_when(
+    flat_CDM_supertype_name == cluster_to_plot & flat_CDM_cluster_avg_correlation > threshold ~ "hq",
+    flat_CDM_supertype_name == cluster_to_plot & flat_CDM_cluster_avg_correlation <= threshold ~ "lq",
+    flat_CDM_supertype_name != cluster_to_plot ~ "bg"
+  ))
 
 
+# plot failed and passed in black and red and the rest in grey
 
-example_sections_plot <- filtered_metadata_sis %>% 
-  filter(section %in% example_sections)
-
-ggplot(example_sections_plot,
+plot <- ggplot(example_sections_plot,
        aes(x=x_coordinate,
            y=y_coordinate,
-           color = flat_CDM_supertype_name,
-           alpha = flat_CDM_cluster_thr_criteria
+           color = classifier,
+           alpha = classifier,
+           size = classifier
        )) +
   geom_point(size=.5,stroke=0,shape=19,) +
   coord_fixed() +
-  ggtitle("Gene Filter") +
-  scale_color_manual(values = supertype_color_palette) +
+  scale_color_manual(values = classifier_palette) +
   scale_y_reverse() +
   theme(legend.position = "none") +
-  scale_alpha_manual(values = c(0.5, 1)) +
+  scale_alpha_manual(values = c(0.1, 1, 1)) +
+  scale_size_manual(values = c(0.1, 2, 2)) +
   guides(color = "none") +
+  guides(alpha = "none") +
+  guides(size = "none") +
   facet_wrap(~fct_rev(section), ncol = 1) +
   theme_void() +
   theme(strip.text = element_blank())
+
+ggsave(filename = "/results/mapping_0682_RN_Spp1_Glut_1_fixed_filter.png", 
+       plot = plot, 
+       width = 5,
+       height = 15, 
+       dpi = 300)
+
+
+threshold <- section_threshold[9,2]
+
+example_sections_plot <- metadata_sis %>%
+  filter(basic_qc_filter == F) %>% 
+  filter(doublets_filter == F) %>%
+  filter(section %in% example_sections) %>% 
+  select(x_coordinate,
+         y_coordinate,
+         section,
+         flat_CDM_supertype_name,
+         flat_CDM_cluster_avg_correlation,
+         flat_CDM_cluster_thr)
+
+# Create the classifier column
+example_sections_plot <- example_sections_plot %>%
+  mutate(classifier = case_when(
+    flat_CDM_supertype_name == cluster_to_plot & flat_CDM_cluster_avg_correlation > threshold ~ "hq",
+    flat_CDM_supertype_name == cluster_to_plot & flat_CDM_cluster_avg_correlation <= threshold ~ "lq",
+    flat_CDM_supertype_name != cluster_to_plot ~ "bg"
+  ))
+
+
+plot <- ggplot(example_sections_plot,
+               aes(x=x_coordinate,
+                   y=y_coordinate,
+                   color = classifier,
+                   alpha = classifier,
+                   size = classifier
+               )) +
+  geom_point(size=.5,stroke=0,shape=19,) +
+  coord_fixed() +
+  scale_color_manual(values = classifier_palette) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  scale_alpha_manual(values = c(0.1, 1, 1)) +
+  scale_size_manual(values = c(0.1, 2, 2)) +
+  guides(color = "none") +
+  guides(alpha = "none") +
+  guides(size = "none") +
+  facet_wrap(~fct_rev(section), ncol = 1) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/mapping_0682_RN_Spp1_Glut_1_dynamic_filter.png", 
+       plot = plot, 
+       width = 5,
+       height = 15, 
+       dpi = 300)
+
+#################### example for initial threshold too low ######################
+# supertype: 0048 IT AON-TT-DP Glut_3
+# sections: 1199651109 1199651112 1199651115 1199651121
+
+cluster_to_plot <- "0048 IT AON-TT-DP Glut_3"
+example_sections <- c("1199651109","1199651112","1199651115","1199651121")
+
+classifier_palette <- c("lightgrey","black","red")
+
+threshold <- 0.5
+
+example_sections_plot <- metadata_sis %>%
+  filter(basic_qc_filter == F) %>% 
+  filter(doublets_filter == F) %>%
+  filter(section %in% example_sections) %>% 
+  select(x_coordinate,
+         y_coordinate,
+         section,
+         flat_CDM_supertype_name,
+         flat_CDM_cluster_avg_correlation,
+         flat_CDM_cluster_thr)
+
+# Create the classifier column
+example_sections_plot <- example_sections_plot %>%
+  mutate(classifier = case_when(
+    flat_CDM_supertype_name == cluster_to_plot & flat_CDM_cluster_avg_correlation > threshold ~ "hq",
+    flat_CDM_supertype_name == cluster_to_plot & flat_CDM_cluster_avg_correlation <= threshold ~ "lq",
+    flat_CDM_supertype_name != cluster_to_plot ~ "bg"
+  ))
+
+plot <- ggplot(example_sections_plot,
+               aes(x=x_coordinate,
+                   y=y_coordinate,
+                   color = classifier,
+                   alpha = classifier,
+                   size = classifier
+               )) +
+  geom_point(size=.5,stroke=0,shape=19,) +
+  coord_fixed() +
+  scale_color_manual(values = classifier_palette) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  scale_alpha_manual(values = c(0.1, 1, 1)) +
+  scale_size_manual(values = c(0.1, 2, 2)) +
+  guides(color = "none") +
+  guides(alpha = "none") +
+  guides(size = "none") +
+  facet_wrap(~fct_rev(section), ncol = 1) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/mapping_0048_IT_AON-TT-DP_Glut_3_fixed_filter.png", 
+       plot = plot, 
+       width = 5,
+       height = 15, 
+       dpi = 300)
+
+threshold <- section_threshold[2,2]
+
+example_sections_plot <- metadata_sis %>%
+  filter(basic_qc_filter == F) %>% 
+  filter(doublets_filter == F) %>%
+  filter(section %in% example_sections) %>% 
+  select(x_coordinate,
+         y_coordinate,
+         section,
+         flat_CDM_supertype_name,
+         flat_CDM_cluster_avg_correlation,
+         flat_CDM_cluster_thr)
+
+# Create the classifier column
+example_sections_plot <- example_sections_plot %>%
+  mutate(classifier = case_when(
+    flat_CDM_supertype_name == cluster_to_plot & flat_CDM_cluster_avg_correlation > threshold ~ "hq",
+    flat_CDM_supertype_name == cluster_to_plot & flat_CDM_cluster_avg_correlation <= threshold ~ "lq",
+    flat_CDM_supertype_name != cluster_to_plot ~ "bg"
+  ))
+
+plot <- ggplot(example_sections_plot,
+               aes(x=x_coordinate,
+                   y=y_coordinate,
+                   color = classifier,
+                   alpha = classifier,
+                   size = classifier
+               )) +
+  geom_point(size=.5,stroke=0,shape=19,) +
+  coord_fixed() +
+  scale_color_manual(values = classifier_palette) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  scale_alpha_manual(values = c(0.1, 1, 1)) +
+  scale_size_manual(values = c(0.1, 1, 1)) +
+  guides(color = "none") +
+  guides(alpha = "none") +
+  guides(size = "none") +
+  facet_wrap(~fct_rev(section), ncol = 1) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/mapping_0048_IT_AON-TT-DP_Glut_3_dynamic_filter.png", 
+       plot = plot, 
+       width = 5,
+       height = 15, 
+       dpi = 300)
