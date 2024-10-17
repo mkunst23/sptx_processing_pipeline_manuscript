@@ -31,6 +31,22 @@ ss <- "https://docs.google.com/spreadsheets/d/1a4URa_t3oc824vjIA8LcyYmJrv0-2Rm7Q
 supertype_colors <- read_sheet(ss, sheet="supertypes")
 supertype_color_palette <- setNames(supertype_colors$supertype_color_new, supertype_colors$supertype_id_label)
 
+cluster_colors <- read_sheet(ss, sheet="clusters")
+cluster_color_palette <- setNames(cluster_colors$cluster_color, cluster_colors$cluster_label)
+
+# load corrected cell coordinates
+load("/scratch/coordinates_sis.rda")
+# load data segmented with in-house cellpose model
+load("/scratch/metadata_sis.rda")
+
+# add rotated coordinates to metadata
+metadata_sis <- merge(metadata_sis,
+                      coordinates_sis,
+                      by = 0)
+
+metadata_sis <- metadata_sis %>% 
+  rownames_to_column( var = "cell_label")
+
 filter_palette <- c("grey","red")
 
 example_sections = c("1199650984",
@@ -51,19 +67,6 @@ example_supertypes <- c("0682 RN Spp1 Glut_1",
                         "0396 SI-MPO-LPO Lhx8 Gaba_1",
                         "0295 NDB-SI-ant Prdm12 Gaba_1",
                         "0056 MEA Slc17a7 Glut_2")
-
-# load corrected cell coordinates
-load("/scratch/coordinates_sis.rda")
-# load data segmented with in-house cellpose model
-load("/scratch/metadata_sis.rda")
-
-# add rotated coordinates to metadata
-metadata_sis <- merge(metadata_sis,
-                      coordinates_sis,
-                      by = 0)
-
-metadata_sis <- metadata_sis %>% 
-  rownames_to_column( var = "cell_label")
 
 # filter out relevant columns
 filtered_metadata_sis <- metadata_sis %>%
@@ -417,3 +420,107 @@ ggsave(filename = "/results/mapping_0048_IT_AON-TT-DP_Glut_3_dynamic_filter.png"
        width = 5,
        height = 15, 
        dpi = 300)
+
+
+##################### example cases of bimodal distribution ###############
+
+# find cases of bimodal distribution
+
+bimdal_clusters <- metadata_sis %>% 
+  filter(is_bimodal_cluster == TRUE) %>% 
+  pull(flat_CDM_cluster_name) %>% 
+  unique()
+
+example_clusters <- c("5155 SPVI-SPVC Sall3 Lhx1 Gly-Gaba_2",
+                      "5174 DCO Il22 Gly-Gaba_3")
+
+
+
+# filter out relevant columns
+filtered_metadata_sis <- metadata_sis %>%
+  filter(basic_qc_filter == F) %>% 
+  filter(doublets_filter == F) %>%
+  filter(flat_CDM_cluster_name %in% example_clusters) %>% 
+  select(cell_label,
+         x_coordinate,
+         y_coordinate,
+         section,
+         basic_qc_filter,
+         doublets_filter,
+         final_filter,
+         is_bimodal_cluster,
+         flat_CDM_class_name,
+         flat_CDM_class_avg_correlation,
+         CDM_class_color,
+         flat_CDM_subclass_name,
+         flat_CDM_subclass_avg_correlation,
+         CDM_subclass_color,
+         flat_CDM_supertype_name,
+         flat_CDM_supertype_avg_correlation,
+         flat_CDM_supertype_thr_criteria,
+         CDM_supertype_color,
+         flat_CDM_cluster_name,
+         flat_CDM_cluster_avg_correlation,
+         flat_CDM_cluster_thr,
+         flat_CDM_cluster_thr_criteria,
+         flat_CDM_thr,
+         CDM_cluster_color)
+
+
+# extract section threshold
+section_threshold <- filtered_metadata_sis %>% 
+  select(flat_CDM_cluster_name,
+         flat_CDM_thr) %>% 
+  unique() %>% 
+  arrange(flat_CDM_cluster_name)
+
+
+# plot distribution of correlation coefficients for selected 
+plot <- ggplot(filtered_metadata_sis,
+               aes(x = flat_CDM_cluster_name,
+                   y = flat_CDM_cluster_avg_correlation,
+                   fill = flat_CDM_cluster_name)) +
+  geom_violin() +
+  geom_boxplot(width = .2,
+               alpha = .6,
+               fatten = NULL,
+               show.legend = F) +
+  stat_summary(fun = "median",
+               show.legend = F,
+               position = position_dodge(.2)) +
+  scale_fill_manual(values = cluster_color_palette) +
+  geom_hline(yintercept = 0.5, 
+             linetype = "dashed", 
+             color = "black") +
+  labs(x = "Cluster Name",
+       y = "average correlation") + 
+  geom_segment(aes(x = 0.75, 
+                   xend = 1.25,
+                   y = section_threshold[1,2],
+                   yend = section_threshold[1,2],
+                   color = "red")) +
+  geom_segment(aes(x = 1.75, 
+                   xend = 2.25,
+                   y = section_threshold[2,2],
+                   yend = section_threshold[2,2],
+                   color = "red")) +theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1),
+        legend.position = "none")
+
+
+ggsave(filename = "/results/bimodal_filter.pdf", 
+       plot = plot, 
+       width = 10,
+       height = 7, 
+       dpi = 300)
+
+
+
+cluster_to_plot <- "5174 DCO Il22 Gly-Gaba_3"
+
+example_sections <- c("1199650965",
+                      "1199650968",
+                      "1199650975",
+                      "1199650972")
+
