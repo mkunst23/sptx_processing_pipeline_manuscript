@@ -81,7 +81,7 @@ cl.df <- cl.df %>%
                 nt_type_combo_label)
 
 
-sd.df <- read_sheet("https://docs.google.com/spreadsheets/d/1UpfDYDbq3s0Jeh8cLg9Y0yhPCJxH_H8WG4Y0y0_mNHg/edit?gid=70495470#gid=70495470", sheet = "638850_v3")
+sd.df <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "spatial_domains")
 # select only necessary columns 
 sd.df <- sd.df %>% 
   dplyr::select(Cluster_id,
@@ -90,50 +90,11 @@ sd.df <- sd.df %>%
                 graph_order,
                 ccf_broad)
 
-broad_ccf_color <- read_sheet("https://docs.google.com/spreadsheets/d/1UpfDYDbq3s0Jeh8cLg9Y0yhPCJxH_H8WG4Y0y0_mNHg/edit?gid=70495470#gid=70495470", sheet = "CCF_broad_region_color")
+broad_ccf_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "CCF_broad_region_color")
 broad_ccf_color_palette <- setNames(broad_ccf_color$color_hex_tripet, broad_ccf_color$ccf_broad)
 
-# define glial subclasses
-glia_sc <- c("316 Bergmann NN",
-             "317 Astro-CB NN",
-             "318 Astro-NT NN",
-             "319 Astro-TE NN",
-             "320 Astro-OLF NN",
-             "321 Astroependymal NN",
-             "326 OPC NN",
-             "327 Oligo NN",
-             "328 OEC NN")
-
-# define neuronal classes
-neuronal_classes <- c("01 IT-ET Glut",
-                      "02 NP-CT-L6b Glut",
-                      "03 OB-CR Glut",
-                      "04 DG-IMN Glut",
-                      "05 OB-IMN GABA",
-                      "06 CTX-CGE GABA",
-                      "07 CTX-MGE GABA",
-                      "08 CNU-MGE GABA",
-                      "09 CNU-LGE GABA",
-                      "10 LSX GABA",
-                      "11 CNU-HYa GABA",
-                      "12 HY GABA",
-                      "13 CNU-HYa Glut",
-                      "14 HY Glut",
-                      "15 HY Gnrh1 Glut",
-                      "16 HY MM Glut",
-                      "17 MH-LH Glut",
-                      "18 TH Glut",
-                      "19 MB Glut",
-                      "20 MB GABA",
-                      "21 MB Dopa",
-                      "22 MB-HB Sero",
-                      "23 P Glut",
-                      "24 MY Glut",
-                      "26 P GABA",
-                      "27 MY GABA",
-                      "28 CB GABA",
-                      "29 CB Glut")
-
+spatial_domain_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "spatial_domains")
+spatial_domain_palette <- setNames(spatial_domain_color$spatial_domain_level_2_color, spatial_domain_color$spatial_domain_level_2)
 
 # read in metadata file
 load("/scratch/638850_metadata_sis.rda")
@@ -185,9 +146,6 @@ metadata_sis <- merge(metadata_sis,
                       all.x = T,
                       all.y = F)
 
-
-spatial_clusters_colors <- randomColor(length(unique(metadata_sis$spatial_domain_level_2)), luminosity="dark")
-spatial_cluster_palette <- setNames(spatial_clusters_colors, unique(metadata_sis$spatial_domain_level_2))
 
 metadata_subset <- metadata_sis %>% 
   filter(final_filter == F) %>%
@@ -256,13 +214,19 @@ plot <- ggplot(plot_data,
              stroke=0,
              shape=19,) +
   coord_fixed() +
-  scale_color_manual(values=leiden_cluster_palette) +
+  scale_color_manual(values=spatial_domain_palette) +
   scale_y_reverse() +
   theme(legend.position = "none") +
   guides(color = "none") +
   facet_wrap(~fct_rev(section), nrow = 2) +
   theme_void() +
   theme(strip.text = element_blank())
+
+ggsave(filename = "/results/sd_example_sections.png", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 160)
 
 ####################### create base heatmap #####################
 
@@ -284,8 +248,8 @@ subclass_dominance <- ggplot(dominance_scores, aes(x = flat_CDM_subclass_name,
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(), #remove x axis ticks
         axis.title.x=element_blank(),
-        #axis.title.y=element_blank(),
-        #axis.text.y=element_blank(),  #remove y axis labels
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),  #remove y axis labels
         axis.ticks.y=element_blank(), #remove y axis ticks
         panel.border = element_rect(colour = "black", fill = NA)
   )
@@ -309,7 +273,6 @@ l2plot <- ggplot(data=add.meta) +
         legend.position = "none")
 
 # plot class tiles
-
 cols <- setNames(class_colors$class_color, 
                  class_colors$class_id_label)
 
@@ -329,6 +292,25 @@ clplot <- ggplot(data=add.meta) +
         #                           hjust = 1),
         legend.position = "right")
 
+
+sd2_plot <- ggplot(data=region.mapping) + 
+  geom_tile(aes(y=spatial_domain_level_2, 
+                x=1, 
+                fill=spatial_domain_level_2)) +
+  scale_fill_manual(values=spatial_domain_palette, 
+                    name = "spatial domain", 
+                    limits = force) +
+  #theme_void() +
+  theme(panel.background = element_blank(),
+        axis.text.x=element_blank(), #remove x axis labels
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.title.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        legend.position = "none")
+
+#plot CCF color tiles
 ccfplot <- ggplot(data=region.mapping) + 
   geom_tile(aes(y=spatial_domain_level_2, 
                 x=1, 
@@ -341,7 +323,7 @@ ccfplot <- ggplot(data=region.mapping) +
         axis.text.x=element_blank(), #remove x axis labels
         axis.ticks.x=element_blank(), #remove x axis ticks
         axis.title.x=element_blank(),
-        axis.text.y=element_blank(),
+        #axis.text.y=element_blank(),
         axis.title.y=element_blank(),
         axis.ticks.y=element_blank(),
         legend.position = "none")
@@ -349,4 +331,13 @@ ccfplot <- ggplot(data=region.mapping) +
 
 final_subclass_dominance <- subclass_dominance %>%
   insert_bottom(l2plot, height = 0.03) %>%
-  insert_bottom(clplot, height = 0.03)
+  insert_bottom(clplot, height = 0.03)  %>% 
+  insert_left(sd2_plot, width=0.01) %>% 
+  insert_left(ccfplot, width=0.01)
+
+ggsave(filename = "/results/sd_heatmap.pdf", 
+       plot = final_subclass_dominance, 
+       width = 14,
+       height = 6, 
+       dpi = 160)
+
