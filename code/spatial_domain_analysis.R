@@ -90,11 +90,40 @@ sd.df <- sd.df %>%
                 graph_order,
                 ccf_broad)
 
+# load landmark annotation per cluster
+cl.anat.df <- read_sheet("https://docs.google.com/spreadsheets/d/1v7PDfLc_9vOcuz_WKk5ZiSUKjbu3xCux9VanVOA7QOE/edit?gid=612105623#gid=612105623", sheet = "cluster_region_annotation")
+cl.anat.df <- cl.anat.df %>% 
+  select(cluster_id_label,
+         broad_region,
+         registration_landmark)
+
 broad_ccf_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "CCF_broad_region_color")
 broad_ccf_color_palette <- setNames(broad_ccf_color$color_hex_tripet, broad_ccf_color$ccf_broad)
+# order by graph order
+broad_ccf_color <- broad_ccf_color %>% 
+  arrange(desc(graph_order)) 
 
 spatial_domain_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "spatial_domains")
 spatial_domain_palette <- setNames(spatial_domain_color$spatial_domain_level_2_color, spatial_domain_color$spatial_domain_level_2)
+
+# order by graph order
+spatial_domain_color <- spatial_domain_color %>% 
+  arrange(desc(graph_order))
+
+spatial_domain_1_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "spatial_domain_level_1_color")
+spatial_domain_1_palette <- setNames(spatial_domain_1_color$spatial_domain_level_1_color, spatial_domain_1_color$spatial_domain_level_1)
+
+# order by graph order
+spatial_domain_1_color <- spatial_domain_1_color %>% 
+  arrange(desc(graph_order))
+
+broad_landmarks_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "broad_landmarks")
+broad_landmarks_color_palette <- setNames(broad_landmarks_color$broad_region_color, broad_landmarks_color$broad_region)
+
+# order by graph order
+broad_landmarks_color <- broad_landmarks_color %>% 
+  arrange(desc(graph_order))
+
 
 # read in metadata file
 load("/scratch/638850_metadata_sis.rda")
@@ -138,6 +167,12 @@ metadata_sis <- merge(metadata_sis,
                       all.x = T,
                       all.y = F)
 
+metadata_sis <- merge(metadata_sis,
+                      cl.anat.df,
+                      by.x = "flat_CDM_cluster_name",
+                      by.y = "cluster_id_label",
+                      all.x = T,
+                      all.y = F)
 
 metadata_sis <- merge(metadata_sis,
                       sd.df,
@@ -200,6 +235,9 @@ add.meta <- metadata_subset %>%
   unique %>% 
   arrange(flat_CDM_class_name, flat_CDM_subclass_name)
 
+
+##################### plot example sections #####################
+
 example_sections <- c("1199650953","1199651021","1199651042","1199651084")
 
 plot_data <- metadata_subset %>% 
@@ -228,7 +266,7 @@ ggsave(filename = "/results/sd_example_sections.png",
        height = 6, 
        dpi = 160)
 
-####################### create base heatmap #####################
+##################### create heatmap for subclass dominace #####################
 
 dominance_scores <- metadata_subset %>%
   count(spatial_domain_level_2, flat_CDM_subclass_name) %>%
@@ -298,16 +336,15 @@ sd2_plot <- ggplot(data=region.mapping) +
                 x=1, 
                 fill=spatial_domain_level_2)) +
   scale_fill_manual(values=spatial_domain_palette, 
-                    name = "spatial domain", 
+                    name = "Spatial domain", 
                     limits = force) +
-  #theme_void() +
-  theme(panel.background = element_blank(),
-        axis.text.x=element_blank(), #remove x axis labels
-        axis.ticks.x=element_blank(), #remove x axis ticks
-        axis.title.x=element_blank(),
-        axis.text.y=element_blank(),
-        axis.title.y=element_blank(),
-        axis.ticks.y=element_blank(),
+  theme_void() +
+  xlab( "Spatial Domain") +
+  theme(axis.title.x = element_text(size=8, 
+                                    hjust=1, 
+                                    vjust=0.5),
+        #axis.text.x = element_text(angle = 45, 
+        #                           hjust = 1),
         legend.position = "none")
 
 #plot CCF color tiles
@@ -340,4 +377,76 @@ ggsave(filename = "/results/sd_heatmap.pdf",
        width = 14,
        height = 6, 
        dpi = 160)
+
+############## plot Jaccard overlay with landmark clusters ############
+
+# subset data to relevant features
+jaccard_df <- metadata_sis %>%
+  filter(final_filter == F) %>%
+  filter(!is.na(spatial_domain_level_1)) %>% 
+  filter(spatial_domain_level_1 != "LQ") %>% 
+  filter(!is.na(broad_region)) %>%
+  select(cell_id,
+         spatial_domain_level_1,
+         spatial_domain_level_2,
+         broad_region,
+         registration_landmark)
+
+# convert cell label to rownames
+jaccard_df <- jaccard_df %>% 
+  tibble::column_to_rownames("cell_id")
+
+# convert spatial domain level 1 and parcellation division to factors
+cl <- jaccard_df$spatial_domain_level_1
+names(cl) <- rownames(jaccard_df)
+cl <- as.factor(cl)
+
+ref.cl <- jaccard_df$broad_region
+names(ref.cl) <- rownames(jaccard_df)
+ref.cl <- as.factor(ref.cl)
+
+# create a table of the number of cells in each cluster
+tb <- table(cl, ref.cl)
+
+# set minimum threshold for number of cells in a cluster
+min.th = 1
+
+# remove rows with less than min.th cells
+tb.df <- as.data.frame(tb)
+tb.df <- tb.df[tb.df$Freq >= min.th,]
+
+# create a table of the number of cells in each cluster
+cl.size <- table(cl)
+ref.cl.size <- table(ref.cl)
+
+# Compute Jaccard statistics for each pair of clusters
+tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.cl.size[as.character(tb.df[,2])] - tb.df$Freq))
+
+
+# reorder ref.cl and cl
+tb.df$ref.cl <- factor(tb.df$ref.cl,
+                   levels = broad_landmarks_color$broad_region) 
+
+tb.df$cl <- factor(tb.df$cl,
+                  levels = spatial_domain_1_color$spatial_domain_level_1) 
+
+tb.df <- tb.df %>% 
+  drop_na()
+
+                                                  
+# make a dot plot where the size of the dot is proportional to tb.df$Freq and the color is proportional to tb.df$jaccard
+ggplot(tb.df, 
+       aes(x = cl, 
+           y = ref.cl)) + 
+  geom_point(aes(size = sqrt(Freq),
+                 color = jaccard)) + 
+  theme(axis.text.x = element_text(vjust = 0.2,
+                                   hjust = 1, 
+                                   angle = 45,
+                                   size = 8),
+        axis.text.y = element_text(size = 8),
+        panel.background = element_rect(fill = "white")) +
+  scale_color_gradient(low = "yellow", 
+                       high = "darkblue") + 
+  scale_size(range = c(0, 5)) 
 
