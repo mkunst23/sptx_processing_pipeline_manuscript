@@ -128,6 +128,13 @@ broad_landmarks_color <- broad_landmarks_color %>%
 # read in metadata file
 load("/scratch/638850_metadata_sis.rda")
 
+load("/scratch/638850_reconstructed_coordinates_sis.rda")
+
+metadata_sis <- merge(metadata_sis,
+                      coordinates_sis,
+                      by = 0)
+
+
 metadata_sis <- metadata_sis %>%
   mutate(temp = flat_CDM_class_name) %>%
   separate(temp, 
@@ -181,7 +188,6 @@ metadata_sis <- merge(metadata_sis,
                       all.x = T,
                       all.y = F)
 
-
 metadata_subset <- metadata_sis %>% 
   filter(final_filter == F) %>%
   filter(!is.na(spatial_domain_level_1)) %>% 
@@ -207,9 +213,9 @@ metadata_subset <- metadata_sis %>%
          ccf_broad,
          CCF_level1,
          CCF_level2,
-         volume_x,
-         volume_y,
-         volume_z,
+         x_reconstructed,
+         y_reconstructed,
+         z_reconstructed,
          mapped)
 
 # grab colors for the different levels of cell types. Thsoe will be used later for plotting
@@ -238,14 +244,17 @@ add.meta <- metadata_subset %>%
 
 ##################### plot example sections #####################
 
-example_sections <- c("1199650953","1199651021","1199651042","1199651084")
+example_sections <- c("1199650953",
+                      "1199651021",
+                      "1199651042",
+                      "1199651084")
 
 plot_data <- metadata_subset %>% 
   filter(section %in% example_sections)
 
 plot <- ggplot(plot_data,
-               aes(x=volume_x,
-                   y=volume_y,
+               aes(x=x_reconstructed,
+                   y=y_reconstructed,
                    color = spatial_domain_level_2
                )) +
   geom_point(size=.5,
@@ -440,12 +449,19 @@ plot <- ggplot(tb.df,
            y = ref.cl)) + 
   geom_point(aes(size = sqrt(Freq),
                  color = jaccard)) + 
-  theme(axis.text.x = element_text(vjust = 0.2,
+  theme(panel.background = element_blank(),
+        axis.text.x = element_text(angle = 45, 
                                    hjust = 1, 
-                                   angle = 45,
                                    size = 8),
-        axis.text.y = element_text(size = 8),
-        panel.background = element_rect(fill = "white")) +
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(hjust = 1, 
+                                 size = 8),  #remove y axis labels
+        axis.ticks.y=element_blank(), #remove y axis ticks
+        panel.grid.major = element_line(color = "grey80"), # Major grid lines
+        panel.grid.minor = element_line(color = "grey90"),  # Minor grid lines
+        panel.border = element_rect(colour = "black", fill = NA)) +
   labs(x = "Spatial domaind level 1", y = "Region specific clusters") +
   scale_color_gradient(low = "yellow", 
                        high = "darkblue") + 
@@ -453,6 +469,6 @@ plot <- ggplot(tb.df,
 
 ggsave(filename = "/results/jaccard.pdf", 
        plot = plot, 
-       width = 14,
-       height = 10, 
+       width = 7,
+       height = 5, 
        dpi = 160)
