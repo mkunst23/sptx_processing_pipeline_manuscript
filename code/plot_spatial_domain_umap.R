@@ -140,10 +140,43 @@ ggsave(filename = "/results/umap_sd_domains.png",
 
 ###################### plot umaps for sections ###################
 
-# create colormap for sections
+# load color palette for section
 
-section_cluster_colors <- randomColor(length(unique(gridded_metadata$section)), luminosity="dark")
-section_cluster_palette <- setNames(section_cluster_colors, unique(gridded_metadata$section))
+section_cluster_colors <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=1482302853#gid=1482302853", sheet = "section_metadata")
+section_cluster_palette <- setNames(section_cluster_colors$color,section_cluster_colors$barcode)
+
+# plot legend
+plot <- ggplot(gridded_metadata,
+               aes(x=X_umap.1,
+                   y=X_umap.2,
+                   color = section
+               )) +
+  geom_point(size=.1,
+             stroke=0,
+             shape=19,) +
+  coord_fixed() +
+  scale_color_manual(values=section_cluster_palette) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none") +
+  theme_void() +
+  theme(strip.text = element_blank()) +
+  guides(color = guide_legend(override.aes = list(size = 4, 
+                                                  shape = 15)))
+# Extract the legend
+legend <- get_legend(plot)
+
+# Plot only the legend
+legend_plot <- plot_grid(legend)
+
+# Save the legend to a PDF
+ggsave("/results/legend_sections.pdf", 
+       legend_plot, 
+       width = 6, 
+       height = 5)
+
+# plot umap without legend
+
 
 plot <- ggplot(gridded_metadata,
        aes(x=X_umap.1,
@@ -161,7 +194,7 @@ plot <- ggplot(gridded_metadata,
   theme_void() +
   theme(strip.text = element_blank())
 
-ggsave(filename = "/results/umap.pdf", 
+ggsave(filename = "/results/umap_sections.png", 
        plot = plot, 
        width = 6,
        height = 6, 

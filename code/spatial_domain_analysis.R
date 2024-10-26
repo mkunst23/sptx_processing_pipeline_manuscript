@@ -117,7 +117,7 @@ spatial_domain_1_palette <- setNames(spatial_domain_1_color$spatial_domain_level
 spatial_domain_1_color <- spatial_domain_1_color %>% 
   arrange(desc(graph_order))
 
-broad_landmarks_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "broad_landmarks")
+broad_landmarks_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "broad_landmarks_anno")
 broad_landmarks_color_palette <- setNames(broad_landmarks_color$broad_region_color, broad_landmarks_color$broad_region)
 
 # order by graph order
@@ -378,7 +378,7 @@ ggsave(filename = "/results/sd_heatmap.pdf",
        height = 6, 
        dpi = 160)
 
-############## plot Jaccard overlay with landmark clusters ############
+############## plot Jaccard overlay with broad landmark clusters ############
 
 # subset data to relevant features
 jaccard_df <- metadata_sis %>%
@@ -435,8 +435,8 @@ tb.df <- tb.df %>%
 
                                                   
 # make a dot plot where the size of the dot is proportional to tb.df$Freq and the color is proportional to tb.df$jaccard
-ggplot(tb.df, 
-       aes(x = cl, 
+plot <- ggplot(tb.df, 
+       aes(x = fct_rev(cl), 
            y = ref.cl)) + 
   geom_point(aes(size = sqrt(Freq),
                  color = jaccard)) + 
@@ -446,7 +446,13 @@ ggplot(tb.df,
                                    size = 8),
         axis.text.y = element_text(size = 8),
         panel.background = element_rect(fill = "white")) +
+  labs(x = "Spatial domaind level 1", y = "Region specific clusters") +
   scale_color_gradient(low = "yellow", 
                        high = "darkblue") + 
   scale_size(range = c(0, 5)) 
 
+ggsave(filename = "/results/jaccard.pdf", 
+       plot = plot, 
+       width = 14,
+       height = 10, 
+       dpi = 160)
