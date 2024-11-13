@@ -125,7 +125,41 @@ plot <- ggplot(filtered_metadata_sis,
              linetype = "dashed", 
              color = "black") +
   labs(x = "Supertype Name",
-       y = "# of detected spots per cell") + 
+       y = "# of detected spots per cell") +
+  guides(color = "none") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1),
+        legend.position = "none")
+
+
+ggsave(filename = "/results/mapping_filter_old.pdf", 
+       plot = plot, 
+       width = 10,
+       height = 7, 
+       dpi = 300)
+
+
+
+plot <- ggplot(filtered_metadata_sis,
+               aes(x = flat_CDM_supertype_name,
+                   y = flat_CDM_cluster_avg_correlation,
+                   fill = flat_CDM_supertype_name)) +
+  geom_violin() +
+  geom_boxplot(width = .2,
+               alpha = .6,
+               fatten = NULL,
+               show.legend = F) +
+  stat_summary(fun = "median",
+               show.legend = F,
+               position = position_dodge(.2)) +
+  scale_fill_manual(values = supertype_color_palette) +
+  geom_hline(yintercept = 0.5, 
+             linetype = "dashed", 
+             color = "black") +
+  labs(x = "Supertype Name",
+       y = "# of detected spots per cell") +
+  guides(color = "none") +
   geom_segment(aes(x = 0.75, 
                    xend = 1.25,
                    y = section_threshold[1,2],
@@ -197,7 +231,7 @@ plot <- ggplot(filtered_metadata_sis,
         legend.position = "none")
 
 
-ggsave(filename = "/results/mapping_filter.pdf", 
+ggsave(filename = "/results/mapping_filter_new.pdf", 
        plot = plot, 
        width = 10,
        height = 7, 

@@ -243,21 +243,33 @@ add.meta <- metadata_subset %>%
 
 
 ##################### plot example sections #####################
+# add more sections
+# only plot hemisections
 
-example_sections <- c("1199650953",
-                      "1199651021",
-                      "1199651042",
-                      "1199651084")
+example_sections <- c("1199650941",
+                      "1199650950",
+                      "1199650965",
+                      "1199650975",
+                      "1199650999",
+                      "1199651012",
+                      "1199651024",
+                      "1199651039",
+                      "1199651057",
+                      "1199651072",
+                      "1199651084",
+                      "1199651103")
 
 plot_data <- metadata_subset %>% 
-  filter(section %in% example_sections)
+  filter(section %in% example_sections) %>% 
+  filter(x_reconstructed < 5.6)
+
 
 plot <- ggplot(plot_data,
                aes(x=x_reconstructed,
                    y=y_reconstructed,
                    color = spatial_domain_level_2
                )) +
-  geom_point(size=.5,
+  geom_point(size=.1,
              stroke=0,
              shape=19,) +
   coord_fixed() +
@@ -406,11 +418,11 @@ jaccard_df <- jaccard_df %>%
   tibble::column_to_rownames("cell_id")
 
 # convert spatial domain level 1 and parcellation division to factors
-cl <- jaccard_df$spatial_domain_level_1
+cl <- jaccard_df$broad_region
 names(cl) <- rownames(jaccard_df)
 cl <- as.factor(cl)
 
-ref.cl <- jaccard_df$broad_region
+ref.cl <- jaccard_df$spatial_domain_level_1
 names(ref.cl) <- rownames(jaccard_df)
 ref.cl <- as.factor(ref.cl)
 
@@ -433,10 +445,10 @@ tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.
 
 
 # reorder ref.cl and cl
-tb.df$ref.cl <- factor(tb.df$ref.cl,
+tb.df$cl <- factor(tb.df$cl,
                    levels = broad_landmarks_color$broad_region) 
 
-tb.df$cl <- factor(tb.df$cl,
+tb.df$ref.cl <- factor(tb.df$ref.cl,
                   levels = spatial_domain_1_color$spatial_domain_level_1) 
 
 tb.df <- tb.df %>% 

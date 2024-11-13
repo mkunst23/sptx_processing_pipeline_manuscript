@@ -132,67 +132,28 @@ cells_to_keep <- filtered_metadata_vpt$sample_name
 subset_data_vpt <- data_vpt %>% 
   filter(sample_name %in% cells_to_keep)
 
-# Subset count martrix to marker genes
-marker_genes_data <- subset_data_vpt %>% 
-  select(sample_name,
-         all_of(marker_genes))
 
-# list of subclasses
+# add vpt to end of each class name
+filtered_metadata_vpt <- filtered_metadata_vpt %>%
+  mutate(class_label = paste0(class_label, " vpt"))
 
-plot_anno_vpt <-  filtered_metadata_vpt %>% 
-  filter(subclass_label == "Sncg Gaba")
-
-plot_data_vpt <- subset_data_vpt %>% 
-  filter(sample_name %in% plot_anno_vpt$sample_name)
-
-
-group_violin_plot(plot_data_vpt, 
-                  plot_anno_vpt, 
-                  genes = c("Slc17a7","Slc17a6","Nrn1",
-                            "Slc32a1","Gad2",
-                            "Sox10","Mog",
-                            "Aqp4","Gfap","Glis3",
-                            "Igf2","Tbx3",
-                            "Arhgap15","Ctss"), 
-                  grouping = "class", 
-                  log_scale = FALSE,
-                  font_size = 8,
-                  rotate_counts = TRUE)
+group_dot_plot(subset_data_vpt, 
+               filtered_metadata_vpt, 
+               genes = c("Slc17a7","Slc17a6","Nrn1",
+                         "Slc32a1","Gad2",
+                         "Sox10","Mog",
+                         "Aqp4","Gfap","Glis3",
+                         "Igf2","Tbx3",
+                         "Arhgap15","Ctss"), 
+               grouping = "class", 
+               log_scale = TRUE,
+               font_size = 12,
+               max_size = 10,
+               rotate_counts = T)
 
 
-group_heatmap_plot(subset_data_vpt, 
-                   filtered_metadata_vpt, 
-                   genes = c("Slc17a7","Slc17a6","Nrn1",
-                             "Slc32a1","Gad2",
-                             "Sox10","Mog",
-                             "Aqp4","Gfap","Glis3",
-                             "Igf2","Tbx3",
-                             "Arhgap15","Ctss"), 
-                   grouping = "class", 
-                   stat = "tmean",
-                   log_scale = TRUE,
-                   font_size = 8,
-                   rotate_counts = TRUE)
-
-################### prepare datasets for combining ######################
-
-vpt_data_combined <- merge(filtered_metadata_vpt,
-                           marker_genes_data,
-                           by = 0)
-
-vpt_data_combined$Row.names <- NULL
-
-# Convert from wide to long format using column indices
-plot_data_vpt <- vpt_data_combined %>%
-  pivot_longer(
-    cols = 5:18,           # Specify the columns to pivot by their indices
-    names_to = "gene",    # Name of the new key column
-    values_to = "expression"   # Name of the new value column
-  )
-
-plot_data_vpt$tool <- "VPT"
-rm(vpt_data_combined)
-
+rm(data_vpt, metadata_vpt)
+gc()
 
 ####################### process SIS data ##############################
 
@@ -261,39 +222,146 @@ cells_to_keep <- filtered_metadata_sis$sample_name
 subset_data_sis <- data_sis %>% 
   filter(sample_name %in% cells_to_keep)
 
-# Subset count martrix to marker genes
-marker_genes_data <- subset_data_sis %>% 
-  select(sample_name,
-         all_of(marker_genes))
+# add vpt to end of each class name
+filtered_metadata_sis <- filtered_metadata_sis %>%
+  mutate(class_label = paste0(class_label, " sis"))
 
-plot_anno_sis <-  filtered_metadata_sis %>% 
-  filter(class_label %in% class_list)
+filtered_metadata_sis$class_id <- filtered_metadata_sis$class_id + 45
 
-plot_data_sis <- subset_data_sis %>% 
-  filter(sample_name %in% plot_anno_sis$sample_name)
+group_dot_plot(subset_data_sis, 
+               filtered_metadata_sis, 
+               genes = c("Slc17a7","Slc17a6","Nrn1",
+                         "Slc32a1","Gad2",
+                         "Sox10","Mog",
+                         "Aqp4","Gfap","Glis3",
+                         "Igf2","Tbx3",
+                         "Arhgap15","Ctss"), 
+               grouping = "class", 
+               log_scale = TRUE,
+               font_size = 18,
+               max_size = 15,
+               rotate_counts = T)
 
-
-group_violin_plot(plot_data_sis, 
-                  plot_anno_sis, 
-                  genes = c("Slc17a7","Slc17a6","Nrn1",
-                            "Slc32a1","Gad2",
-                            "Sox10","Mog",
-                            "Aqp4","Gfap","Glis3",
-                            "Igf2","Tbx3",
-                            "Arhgap15","Ctss"), 
-                  grouping = "subclass", 
-                  log_scale = FALSE,
-                  font_size = 8,
-                  rotate_counts = TRUE)
-
+rm(data_sis, metadata_sis)
+gc()
 
 ################### Combine datasets ####################
-sis_data_combined <- merge(filtered_metadata_sis,
-                           marker_genes_data,
-                           by = 0)
 
-sis_data_combined$Row.names <- NULL
+data_combined <- rbind(subset_data_vpt,
+                       subset_data_sis)
 
+metadata_combined <- rbind(filtered_metadata_vpt,
+                           filtered_metadata_sis)
+
+# extract class label as data frame
+class_labels_order <- unique(as.data.frame(metadata_combined$class_label))
+colnames(class_labels_order) <- "class_label"
+class_labels_order$class_id <- 1:68
+class_labels_order$class_label <- factor(class_labels_order$class_label,
+                             levels = c("IT-ET Glut sis",
+                                        "IT-ET Glut vpt",
+                                        "NP-CT-L6b Glut sis",
+                                        "NP-CT-L6b Glut vpt",
+                                        "OB-CR Glut sis",
+                                        "OB-CR Glut vpt",
+                                        "DG-IMN Glut sis",
+                                        "DG-IMN Glut vpt",
+                                        "CNU-HYa Glut sis",
+                                        "CNU-HYa Glut vpt",
+                                        "HY Glut sis",
+                                        "HY Glut vpt",
+                                        "HY MM Glut sis",
+                                        "HY MM Glut vpt",
+                                        "HY Gnrh1 Glut sis",
+                                        "HY Gnrh1 Glut vpt",
+                                        "TH Glut sis",
+                                        "TH Glut vpt",
+                                        "MH-LH Glut sis",
+                                        "MH-LH Glut vpt",
+                                        "Pineal Glut sis",
+                                        "Pineal Glut vpt",
+                                        "MB Glut sis",
+                                        "MB Glut vpt",
+                                        "MB Dopa sis",
+                                        "MB Dopa vpt",
+                                        "MB-HB Sero sis",
+                                        "MB-HB Sero vpt",
+                                        "P Glut sis",
+                                        "P Glut vpt",
+                                        "MY Glut sis",
+                                        "MY Glut vpt",
+                                        "CB Glut sis",
+                                        "CB Glut vpt",
+                                        "OB-IMN GABA sis",
+                                        "OB-IMN GABA vpt",
+                                        "CTX-MGE GABA sis",
+                                        "CTX-MGE GABA vpt",
+                                        "CTX-CGE GABA sis",
+                                        "CTX-CGE GABA vpt",
+                                        "LSX GABA sis",
+                                        "LSX GABA vpt",
+                                        "CNU-MGE GABA sis",
+                                        "CNU-MGE GABA vpt",
+                                        "CNU-LGE GABA sis",
+                                        "CNU-LGE GABA vpt",
+                                        "CNU-HYa GABA sis",
+                                        "CNU-HYa GABA vpt",
+                                        "HY GABA sis",
+                                        "HY GABA vpt",
+                                        "MB GABA sis",
+                                        "MB GABA vpt",
+                                        "P GABA sis",
+                                        "P GABA vpt",
+                                        "MY GABA sis",
+                                        "MY GABA vpt",
+                                        "CB GABA sis",
+                                        "CB GABA vpt",
+                                        "Astro-Epen sis",
+                                        "Astro-Epen vpt",
+                                        "OPC-Oligo sis",
+                                        "OPC-Oligo vpt",
+                                        "OEC sis",
+                                        "OEC vpt",
+                                        "Immune sis",
+                                        "Immune vpt",
+                                        "Vascular sis",
+                                        "Vascular vpt"))
+
+class_labels_order <- class_labels_order %>%
+  arrange(class_label)
+
+class_labels_order$class_id <- 1:68
+
+metadata_combined$class_id <- NULL
+
+metadata_combined <- merge(metadata_combined,
+                           class_labels_order,
+                           by = "class_label",
+                           all.x = T,
+                           all.y = F)
+
+plot <- group_dot_plot(data_combined, 
+               metadata_combined, 
+               genes = c("Slc17a7","Slc17a6","Nrn1",
+                         "Slc32a1","Gad2",
+                         "Sox10","Mog",
+                         "Aqp4","Gfap","Glis3",
+                         "Igf2","Tbx3",
+                         "Arhgap15","Ctss"), 
+               grouping = "class", 
+               log_scale = TRUE,
+               font_size = 14,
+               max_size = 15,
+               rotate_counts = T)
+
+ggsave(filename = "/results/gene_expression_comparison.pdf", 
+       plot = plot, 
+       width = 20,
+       height = 10, 
+       dpi = 300)
+  
+########## legacy code for split violin plot ##############  
+  
 # Convert from wide to long format using column indices
 plot_data_sis <- sis_data_combined %>%
   pivot_longer(

@@ -1,3 +1,4 @@
+
 ############ extract data tables from anndata files ##################
 
 suppressPackageStartupMessages({
@@ -44,7 +45,7 @@ data_sis <- rownames_to_column(data_sis, var = "sample_name")
 save(data_sis, file = "/scratch/638850_data_sis.rda")
 
 ################### extract anndata for 687997 #####################
-sis <- read_h5ad("/data/merscope_687997_mouseadult_registered_v3/whole_dataset/mouse_687997_registered.h5ad")
+sis <- read_h5ad("/data/merscope_687997_mouseadult_registered/whole_dataset/mouse_687997_registered.h5ad")
 metadata_sis <- sis$obs
 save(metadata_sis, file = "/scratch/687997_metadata_sis.rda")
 
