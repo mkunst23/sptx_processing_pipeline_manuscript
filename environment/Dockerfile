@@ -1,4 +1,4 @@
-# hash:sha256:aa5053930bec9dd7c5ee77d050616e7cef5aec7411ce0954120e553167e01b74
+# hash:sha256:14b2973c9a0d3d22c6bc1bd7001251962045ed04775ec339510dbd6cb50958b8
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/py-r:python3.10.12-R4.2.3-IRkernel-ubuntu22.04
 
@@ -33,17 +33,20 @@ ARG RCACHE_OPTIONS
 RUN echo $RCACHE_OPTIONS >> $(Rscript -e 'cat(R.home())')/etc/Rprofile.site
 RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("DescTools", "0.99.57")' \
+    && Rscript -e 'remotes::install_version("Formula", "1.2-5")' \
     && Rscript -e 'remotes::install_version("Rvcg", "0.23")' \
     && Rscript -e 'remotes::install_version("alphashape3d", "1.3.2")' \
     && Rscript -e 'remotes::install_version("anndata", "0.7.5.6")' \
     && Rscript -e 'remotes::install_version("ape", "5.8")' \
     && Rscript -e 'remotes::install_version("aplot", "0.2.3")' \
     && Rscript -e 'remotes::install_version("bezier", "1.1.2")' \
+    && Rscript -e 'remotes::install_version("car")' \
     && Rscript -e 'remotes::install_version("colorRamps", "2.3.4")' \
     && Rscript -e 'remotes::install_version("concaveman")' \
     && Rscript -e 'remotes::install_version("cowplot", "1.1.3")' \
     && Rscript -e 'remotes::install_version("dabestr", "2023.9.12")' \
-    && Rscript -e 'remotes::install_version("data.table", "1.16.0")' \
+    && Rscript -e 'remotes::install_version("data.table", "1.16.4")' \
+    && Rscript -e 'remotes::install_version("doBy", "4.6.24")' \
     && Rscript -e 'remotes::install_version("doParallel", "1.0.17")' \
     && Rscript -e 'remotes::install_version("dplyr", "1.1.4")' \
     && Rscript -e 'remotes::install_version("entropy", "1.3.1")' \
@@ -60,9 +63,15 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("igraph", "2.0.3")' \
     && Rscript -e 'remotes::install_version("jpeg", "0.1-10")' \
     && Rscript -e 'remotes::install_version("klaR", "1.7-3")' \
+    && Rscript -e 'remotes::install_version("lme4")' \
     && Rscript -e 'remotes::install_version("lsa", "0.73.3")' \
+    && Rscript -e 'remotes::install_version("mclust", "6.1.1")' \
+    && Rscript -e 'remotes::install_version("minqa", "1.2.8")' \
+    && Rscript -e 'remotes::install_version("nloptr")' \
     && Rscript -e 'remotes::install_version("paletteer", "1.6.0")' \
+    && Rscript -e 'remotes::install_version("pbkrtest")' \
     && Rscript -e 'remotes::install_version("philentropy", "0.8.0")' \
+    && Rscript -e 'remotes::install_version("quantreg", "5.99.1")' \
     && Rscript -e 'remotes::install_version("randomcoloR", "1.1.0.1")' \
     && Rscript -e 'remotes::install_version("rearrr", "0.3.4")' \
     && Rscript -e 'remotes::install_version("reshape", "0.8.9")' \
@@ -85,9 +94,8 @@ RUN Rscript -e 'remotes::install_github( \
 
 RUN Rscript -e 'options(warn=2); install.packages("BiocManager")'
 RUN Rscript -e 'options(warn=2); BiocManager::install(c( \
-        "BiocVersion", \
-        "rhdf5" \
-    ))' # Original versions: 3.16.0 2.42.1
+        "BiocVersion" \
+    ))' # Original versions: 3.16.0
 
 COPY postInstall /
 RUN /postInstall

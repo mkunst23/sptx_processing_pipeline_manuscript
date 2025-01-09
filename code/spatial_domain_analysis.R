@@ -24,6 +24,7 @@ suppressPackageStartupMessages({
   library(igraph)
   library(paletteer)
   library(randomcoloR)
+  library(stringr)
 })
 
 ############### setup environment ######################
@@ -97,6 +98,21 @@ cl.anat.df <- cl.anat.df %>%
          broad_region,
          registration_landmark)
 
+
+# ccf color palette
+ccf_color <- read_sheet("https://docs.google.com/spreadsheets/d/1QOhsYhlsk2KE2pZuSnEwUhEIG4mh782PcAgHrtJyRYI/edit?gid=0#gid=0", sheet = "CCFv3")
+ccf_color <- ccf_color %>% 
+  select(acronym,
+         color_hex_triplet,
+         graph_order) %>% 
+  mutate(color_hex_triplet = paste0("#",color_hex_triplet))
+
+ccf_color_palette <- setNames(ccf_color$color_hex_triplet, ccf_color$acronym)
+# order by graph order
+ccf_color <- ccf_color %>% 
+  arrange(desc(graph_order)) 
+
+
 broad_ccf_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "CCF_broad_region_color")
 broad_ccf_color_palette <- setNames(broad_ccf_color$color_hex_tripet, broad_ccf_color$ccf_broad)
 # order by graph order
@@ -116,6 +132,14 @@ spatial_domain_1_palette <- setNames(spatial_domain_1_color$spatial_domain_level
 # order by graph order
 spatial_domain_1_color <- spatial_domain_1_color %>% 
   arrange(desc(graph_order))
+
+# generate color palette for ccf landmark color
+landmark_color <- read_sheet("https://docs.google.com/spreadsheets/d/1v7PDfLc_9vOcuz_WKk5ZiSUKjbu3xCux9VanVOA7QOE/edit?gid=2094634713#gid=2094634713", sheet = "CCF_landmark_color")
+landmark_color_palette <- setNames(landmark_color$registration_landmark_color, landmark_color$registration_landmark)
+
+# order by graph order
+landmark_color <- landmark_color %>% 
+  arrange(desc(graph_order)) 
 
 broad_landmarks_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "broad_landmarks_anno")
 broad_landmarks_color_palette <- setNames(broad_landmarks_color$broad_region_color, broad_landmarks_color$broad_region)
@@ -282,6 +306,78 @@ plot <- ggplot(plot_data,
   theme(strip.text = element_blank())
 
 ggsave(filename = "/results/sd_example_sections.png", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 160)
+
+
+plot <- ggplot(plot_data,
+               aes(x=x_reconstructed,
+                   y=y_reconstructed,
+                   color = spatial_domain_level_1
+               )) +
+  geom_point(size=.1,
+             stroke=0,
+             shape=19,) +
+  coord_fixed() +
+  scale_color_manual(values=spatial_domain_1_palette) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none") +
+  facet_wrap(~fct_rev(section), nrow = 2) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/sd1_example_sections.png", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 160)
+
+# ccf regions
+plot <- ggplot(plot_data,
+               aes(x=x_reconstructed,
+                   y=y_reconstructed,
+                   color = spatial_domain_level_2
+               )) +
+  geom_point(size=.1,
+             stroke=0,
+             shape=19,) +
+  coord_fixed() +
+  scale_color_manual(values=spatial_domain_palette) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none") +
+  facet_wrap(~fct_rev(section), nrow = 2) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/sd_example_sections.png", 
+       plot = plot, 
+       width = 6,
+       height = 6, 
+       dpi = 160)
+
+
+plot <- ggplot(plot_data,
+               aes(x=x_reconstructed,
+                   y=y_reconstructed,
+                   color = ccf_broad
+               )) +
+  geom_point(size=.1,
+             stroke=0,
+             shape=19,) +
+  coord_fixed() +
+  scale_color_manual(values=broad_ccf_color_palette) +
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none") +
+  facet_wrap(~fct_rev(section), nrow = 2) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/ccf_broad_example_sections.png", 
        plot = plot, 
        width = 6,
        height = 6, 
@@ -480,6 +576,262 @@ plot <- ggplot(tb.df,
   scale_size(range = c(0, 5)) 
 
 ggsave(filename = "/results/jaccard.pdf", 
+       plot = plot, 
+       width = 7,
+       height = 5, 
+       dpi = 160)
+
+
+############################ plot landmarks ########################
+
+
+# subset data to relevant features
+jaccard_df <- metadata_sis %>%
+  filter(final_filter == F) %>%
+  filter(!is.na(spatial_domain_level_2)) %>% 
+  filter(!str_detect(spatial_domain_level_2, "LQ")) %>%
+  filter(!is.na(registration_landmark)) %>%
+  select(cell_id,
+         spatial_domain_level_2,
+         registration_landmark)
+
+# convert cell label to rownames
+jaccard_df <- jaccard_df %>% 
+  tibble::column_to_rownames("cell_id")
+
+# convert spatial domain level 1 and parcellation division to factors
+cl <- jaccard_df$registration_landmark
+names(cl) <- rownames(jaccard_df)
+cl <- as.factor(cl)
+
+ref.cl <- jaccard_df$spatial_domain_level_2
+names(ref.cl) <- rownames(jaccard_df)
+ref.cl <- as.factor(ref.cl)
+
+# create a table of the number of cells in each cluster
+tb <- table(cl, ref.cl)
+
+# set minimum threshold for number of cells in a cluster
+min.th = 1
+
+# remove rows with less than min.th cells
+tb.df <- as.data.frame(tb)
+tb.df <- tb.df[tb.df$Freq >= min.th,]
+
+# create a table of the number of cells in each cluster
+cl.size <- table(cl)
+ref.cl.size <- table(ref.cl)
+
+# Compute Jaccard statistics for each pair of clusters
+tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.cl.size[as.character(tb.df[,2])] - tb.df$Freq))
+
+
+# reorder ref.cl and cl
+tb.df$cl <- factor(tb.df$cl,
+                   levels = landmark_color$registration_landmark) 
+
+tb.df$ref.cl <- factor(tb.df$ref.cl,
+                       levels = spatial_domain_color$spatial_domain_level_2) 
+
+tb.df <- tb.df %>% 
+  drop_na()
+
+
+# make a dot plot where the size of the dot is proportional to tb.df$Freq and the color is proportional to tb.df$jaccard
+plot <- ggplot(tb.df, 
+               aes(x = fct_rev(cl), 
+                   y = ref.cl)) + 
+  geom_point(aes(size = sqrt(Freq),
+                 color = jaccard)) + 
+  theme(panel.background = element_blank(),
+        axis.text.x = element_text(angle = 45, 
+                                   hjust = 1, 
+                                   size = 8),
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(hjust = 1, 
+                                 size = 8),  #remove y axis labels
+        axis.ticks.y=element_blank(), #remove y axis ticks
+        panel.grid.major = element_line(color = "grey80"), # Major grid lines
+        panel.grid.minor = element_line(color = "grey90"),  # Minor grid lines
+        panel.border = element_rect(colour = "black", fill = NA)) +
+  labs(x = "Spatial domaind level 1", y = "Region specific clusters") +
+  scale_color_gradient(low = "yellow", 
+                       high = "darkblue") + 
+  scale_size(range = c(0, 5)) 
+
+ggsave(filename = "/results/jaccard_sd2.pdf", 
+       plot = plot, 
+       width = 7,
+       height = 5, 
+       dpi = 160)
+
+
+################ compare to registration CCF level1 #########################
+
+# subset data to relevant features
+jaccard_df <- metadata_sis %>%
+  filter(final_filter == F) %>%
+  filter(!is.na(spatial_domain_level_1)) %>% 
+  filter(!str_detect(spatial_domain_level_1, "LQ")) %>%
+  filter(!is.na(CCF_level1)) %>%
+  select(cell_id,
+         spatial_domain_level_1,
+         CCF_level1)
+
+# convert cell label to rownames
+jaccard_df <- jaccard_df %>% 
+  tibble::column_to_rownames("cell_id")
+
+# convert spatial domain level 1 and parcellation division to factors
+cl <- jaccard_df$CCF_level1
+names(cl) <- rownames(jaccard_df)
+cl <- as.factor(cl)
+
+ref.cl <- jaccard_df$spatial_domain_level_1
+names(ref.cl) <- rownames(jaccard_df)
+ref.cl <- as.factor(ref.cl)
+
+# create a table of the number of cells in each cluster
+tb <- table(cl, ref.cl)
+
+# set minimum threshold for number of cells in a cluster
+min.th = 1
+
+# remove rows with less than min.th cells
+tb.df <- as.data.frame(tb)
+tb.df <- tb.df[tb.df$Freq >= min.th,]
+
+# create a table of the number of cells in each cluster
+cl.size <- table(cl)
+ref.cl.size <- table(ref.cl)
+
+# Compute Jaccard statistics for each pair of clusters
+tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.cl.size[as.character(tb.df[,2])] - tb.df$Freq))
+
+
+# reorder ref.cl and cl
+tb.df$cl <- factor(tb.df$cl,
+                   levels = ccf_color$acronym) 
+
+tb.df$ref.cl <- factor(tb.df$ref.cl,
+                       levels = spatial_domain_1_color$spatial_domain_level_1) 
+
+tb.df <- tb.df %>% 
+  drop_na()
+
+
+# make a dot plot where the size of the dot is proportional to tb.df$Freq and the color is proportional to tb.df$jaccard
+plot <- ggplot(tb.df, 
+               aes(x = fct_rev(cl), 
+                   y = ref.cl)) + 
+  geom_point(aes(size = sqrt(Freq),
+                 color = jaccard)) + 
+  theme(panel.background = element_blank(),
+        axis.text.x = element_text(angle = 45, 
+                                   hjust = 1, 
+                                   size = 8),
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(hjust = 1, 
+                                 size = 8),  #remove y axis labels
+        axis.ticks.y=element_blank(), #remove y axis ticks
+        panel.grid.major = element_line(color = "grey80"), # Major grid lines
+        panel.grid.minor = element_line(color = "grey90"),  # Minor grid lines
+        panel.border = element_rect(colour = "black", fill = NA)) +
+  labs(x = "Spatial domaind level 1", y = "Region specific clusters") +
+  scale_color_gradient(low = "yellow", 
+                       high = "darkblue") + 
+  scale_size(range = c(0, 5)) 
+
+ggsave(filename = "/results/jaccard_ccf_level1.pdf", 
+       plot = plot, 
+       width = 7,
+       height = 5, 
+       dpi = 160)
+
+
+################ compare to registration CCF level2 #########################
+
+# subset data to relevant features
+jaccard_df <- metadata_sis %>%
+  filter(final_filter == F) %>%
+  filter(!is.na(spatial_domain_level_2)) %>% 
+  filter(!str_detect(spatial_domain_level_2, "LQ")) %>%
+  filter(!is.na(CCF_level2)) %>%
+  select(cell_id,
+         spatial_domain_level_2,
+         CCF_level2)
+
+# convert cell label to rownames
+jaccard_df <- jaccard_df %>% 
+  tibble::column_to_rownames("cell_id")
+
+# convert spatial domain level 1 and parcellation division to factors
+cl <- jaccard_df$CCF_level2
+names(cl) <- rownames(jaccard_df)
+cl <- as.factor(cl)
+
+ref.cl <- jaccard_df$spatial_domain_level_2
+names(ref.cl) <- rownames(jaccard_df)
+ref.cl <- as.factor(ref.cl)
+
+# create a table of the number of cells in each cluster
+tb <- table(cl, ref.cl)
+
+# set minimum threshold for number of cells in a cluster
+min.th = 1
+
+# remove rows with less than min.th cells
+tb.df <- as.data.frame(tb)
+tb.df <- tb.df[tb.df$Freq >= min.th,]
+
+# create a table of the number of cells in each cluster
+cl.size <- table(cl)
+ref.cl.size <- table(ref.cl)
+
+# Compute Jaccard statistics for each pair of clusters
+tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.cl.size[as.character(tb.df[,2])] - tb.df$Freq))
+
+
+# reorder ref.cl and cl
+tb.df$cl <- factor(tb.df$cl,
+                   levels = ccf_color$acronym) 
+
+tb.df$ref.cl <- factor(tb.df$ref.cl,
+                       levels = spatial_domain_color$spatial_domain_level_2) 
+
+tb.df <- tb.df %>% 
+  drop_na()
+
+
+# make a dot plot where the size of the dot is proportional to tb.df$Freq and the color is proportional to tb.df$jaccard
+plot <- ggplot(tb.df, 
+               aes(x = fct_rev(cl), 
+                   y = ref.cl)) + 
+  geom_point(aes(size = sqrt(Freq),
+                 color = jaccard)) + 
+  theme(panel.background = element_blank(),
+        axis.text.x = element_text(angle = 45, 
+                                   hjust = 1, 
+                                   size = 8),
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(hjust = 1, 
+                                 size = 8),  #remove y axis labels
+        axis.ticks.y=element_blank(), #remove y axis ticks
+        panel.grid.major = element_line(color = "grey80"), # Major grid lines
+        panel.grid.minor = element_line(color = "grey90"),  # Minor grid lines
+        panel.border = element_rect(colour = "black", fill = NA)) +
+  labs(x = "Spatial domaind level 1", y = "Region specific clusters") +
+  scale_color_gradient(low = "yellow", 
+                       high = "darkblue") + 
+  scale_size(range = c(0, 5)) 
+
+ggsave(filename = "/results/jaccard_ccf_level2.pdf", 
        plot = plot, 
        width = 7,
        height = 5, 
