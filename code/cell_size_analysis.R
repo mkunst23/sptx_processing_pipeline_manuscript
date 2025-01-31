@@ -12,7 +12,6 @@ suppressPackageStartupMessages({
   library(rearrr)
   library(reticulate)
   library(anndata)
-  library(car)
 })
 
 
@@ -22,3 +21,13 @@ options(mc.cores=30)
 
 load("/scratch/638850_metadata_sis.rda")
 load("/scratch/metadata_vpt.rda")
+
+# plot volumes for sis and vpt of the following cell types
+# 046 Vip GABA (small cells)
+# 022 L5 ET CTX (large cells)
+
+# compare to total distribution
+
+# other large subclasses
+# 058 215
+

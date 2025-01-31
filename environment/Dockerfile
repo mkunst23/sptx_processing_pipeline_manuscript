@@ -1,4 +1,4 @@
-# hash:sha256:14b2973c9a0d3d22c6bc1bd7001251962045ed04775ec339510dbd6cb50958b8
+# hash:sha256:8fed62c3363aa7e39b1084a5a67b3b721c11886a04b27b2cfc47d4ee35e849aa
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/py-r:python3.10.12-R4.2.3-IRkernel-ubuntu22.04
 
@@ -46,7 +46,7 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("cowplot", "1.1.3")' \
     && Rscript -e 'remotes::install_version("dabestr", "2023.9.12")' \
     && Rscript -e 'remotes::install_version("data.table", "1.16.4")' \
-    && Rscript -e 'remotes::install_version("doBy", "4.6.24")' \
+    && Rscript -e 'remotes::install_version("doBy", "4.6.25")' \
     && Rscript -e 'remotes::install_version("doParallel", "1.0.17")' \
     && Rscript -e 'remotes::install_version("dplyr", "1.1.4")' \
     && Rscript -e 'remotes::install_version("entropy", "1.3.1")' \
@@ -96,6 +96,21 @@ RUN Rscript -e 'options(warn=2); install.packages("BiocManager")'
 RUN Rscript -e 'options(warn=2); BiocManager::install(c( \
         "BiocVersion" \
     ))' # Original versions: 3.16.0
+
+ADD "https://github.com/coder/code-server/releases/download/v4.95.3/code-server-4.95.3-linux-amd64.tar.gz" /.code-server/code-server.tar.gz
+	
+RUN cd /.code-server \
+    && tar -xvf code-server.tar.gz \
+    && rm code-server.tar.gz \
+    && ln -s /.code-server/code-server-4.95.3-linux-amd64/bin/code-server  /usr/bin/code-server
+
+RUN mkdir -p /.vscode/extensions \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension REditorSupport.R \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension continue.continue \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension ms-python.python \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension ms-toolsai.jupyter \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension reageyao.bioSyntax \
+    && code-server --extensions-dir="/.vscode/extensions" --install-extension saoudrizwan.claude-dev
 
 COPY postInstall /
 RUN /postInstall

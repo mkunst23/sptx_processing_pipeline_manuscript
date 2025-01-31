@@ -44,6 +44,14 @@ data_sis <- as.data.frame(data_sis)
 data_sis <- rownames_to_column(data_sis, var = "sample_name")
 save(data_sis, file = "/scratch/638850_data_sis.rda")
 
+
+################# extract vpt anndata for 638850 ################
+vpt <- read_h5ad("/data/merscope_638850_mouseadult_processed_VPT/whole_dataset/mouse_638850_filtered.h5ad")
+metadata_vpt <- vpt$obs
+save(metadata_vpt, file = "/scratch/metadata_vpt.rda")
+
+
+
 ################### extract anndata for 687997 #####################
 sis <- read_h5ad("/data/merscope_687997_mouseadult_registered/whole_dataset/mouse_687997_registered.h5ad")
 metadata_sis <- sis$obs
