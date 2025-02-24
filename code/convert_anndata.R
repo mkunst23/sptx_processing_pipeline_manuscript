@@ -44,6 +44,21 @@ data_sis <- as.data.frame(data_sis)
 data_sis <- rownames_to_column(data_sis, var = "sample_name")
 save(data_sis, file = "/scratch/638850_data_sis.rda")
 
+# extract spatial domains
+sd_domains <- read_h5ad("/data/merscope_638850_mouseadult_processed_clust_QC_filt/whole_dataset/mouse_638850_processed.h5ad")
+metadata_sd_domains <- sd_domains$obs
+metadata_sd_domains <- metadata_sd_domains %>% 
+  select(production_cell_id,
+         leiden_res_0.6_knn_8,
+         leiden_res_0.8_knn_8,
+         leiden_res_1.0_knn_8,
+         leiden_res_1.2_knn_8,
+         leiden_res_1.4_knn_8,
+         leiden_res_1.6_knn_8)
+
+fwrite(metadata_sd_domains,
+       '/scratch/mouse_638850_sd.csv',
+       row.names = F)
 
 ################# extract vpt anndata for 638850 ################
 vpt <- read_h5ad("/data/merscope_638850_mouseadult_processed_VPT/whole_dataset/mouse_638850_filtered.h5ad")

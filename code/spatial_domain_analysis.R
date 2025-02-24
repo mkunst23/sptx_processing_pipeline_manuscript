@@ -35,6 +35,7 @@ options(mc.cores=30)
 
 gs4_deauth()
 
+# setup proportion colors for dominance scores
 proportion_colors <- c('#005DFFFF',
                        "#0080FFFF",
                        "#00A2FFFF", 
@@ -74,6 +75,7 @@ proportion_colors <- c('#005DFFFF',
                        "#FF2300FF",
                        "#FF1700FF")
 
+# read in cluster information
 cl.df <- read_sheet("https://docs.google.com/spreadsheets/d/1T86EppILF-Q97OjJyd4R2FjUmPUrdYBUEbbiXqgWEoE/edit#gid=1639101745",sheet = "cl.df.v9_230722")
 # select only necessary columns 
 cl.df <- cl.df %>% 
@@ -149,98 +151,96 @@ broad_landmarks_color <- broad_landmarks_color %>%
   arrange(desc(graph_order))
 
 
-# read in metadata file
-load("/scratch/638850_metadata_sis.rda")
+# load in metadata file
+metadata <- fread("/data/merscope_638850_mouseadult_registered_v2/whole_dataset/mouse_638850_registered.csv")
+metadata$section <- as.character(metadata$section)
 
-load("/scratch/638850_reconstructed_coordinates_sis.rda")
-
-metadata_sis <- merge(metadata_sis,
-                      coordinates_sis,
-                      by = 0)
-
-
-metadata_sis <- metadata_sis %>%
-  mutate(temp = flat_CDM_class_name) %>%
-  separate(temp, 
-           into = c("flat_CDM_class_id", "flat_CDM_class_string"), 
-           sep = " ", 
-           extra = "merge", 
-           fill = "right")
-
-metadata_sis <- metadata_sis %>%
-  mutate(temp = flat_CDM_subclass_name) %>%
-  separate(temp, 
-           into = c("flat_CDM_subclass_id", "flat_CDM_subclass_string"), 
-           sep = " ", 
-           extra = "merge", 
-           fill = "right")
-
-metadata_sis <- metadata_sis %>%
-  mutate(temp = flat_CDM_supertype_name) %>%
-  separate(temp, 
-           into = c("flat_CDM_supertype_id", "flat_CDM_supertype_string"), 
-           sep = " ", 
-           extra = "merge", 
-           fill = "right")
-
-metadata_sis <- metadata_sis %>%
-  mutate(temp = flat_CDM_cluster_name) %>%
-  separate(temp, 
-           into = c("flat_CDM_cluster_id", "flat_CDM_cluster_string"), 
-           sep = " ", 
-           extra = "merge", 
-           fill = "right")
-
-metadata_sis <- merge(metadata_sis,
-                      cl.df,
-                      by.x = "flat_CDM_cluster_name",
-                      by.y = "cluster_id_label",
-                      all.x = T,
-                      all.y = F)
-
-metadata_sis <- merge(metadata_sis,
-                      cl.anat.df,
-                      by.x = "flat_CDM_cluster_name",
-                      by.y = "cluster_id_label",
-                      all.x = T,
-                      all.y = F)
-
-metadata_sis <- merge(metadata_sis,
-                      sd.df,
-                      by.x = "leiden_res_1.2_knn_8",
-                      by.y = "Cluster_id",
-                      all.x = T,
-                      all.y = F)
-
-metadata_subset <- metadata_sis %>% 
-  filter(final_filter == F) %>%
-  filter(!is.na(spatial_domain_level_1)) %>% 
-  filter(spatial_domain_level_1 != "LQ") %>% 
-  select(cell_id,
+# filter out only relevant sections
+metadata <- metadata %>% 
+  select(production_cell_id,
          section,
-         leiden_res_1.2_knn_8,
-         flat_CDM_class_name,
-         flat_CDM_class_id,
-         flat_CDM_subclass_name,
-         flat_CDM_subclass_id,
-         flat_CDM_supertype_name,
-         flat_CDM_supertype_id,
-         flat_CDM_cluster_label,
-         flat_CDM_cluster_id,
-         nt_type_label,
-         nt_type_combo_label,
-         structure_acronym,
-         structure_id,
-         spatial_domain_level_1,
-         spatial_domain_level_2,
-         graph_order,
-         ccf_broad,
          CCF_level1,
          CCF_level2,
-         x_reconstructed,
-         y_reconstructed,
-         z_reconstructed,
-         mapped)
+         final_qc_passed,
+         hrc_mmc_cluster_alias,
+         hrc_mmc_cluster_name,
+         hrc_mmc_supertype_name,
+         hrc_mmc_subclass_name,
+         hrc_mmc_class_name,
+         structure_id,
+         structure_acronym,
+         volume_x,
+         volume_y,
+         volume_z)
+
+sd_domains <- fread('/scratch/mouse_638850_sd.csv')
+
+metadata <- merge(metadata,
+                  sd_domains,
+                  by = 'production_cell_id',
+                  all.x = T,
+                  all.y = F)
+
+metadata <- metadata %>%
+  mutate(temp = hrc_mmc_class_name) %>%
+  separate(temp,
+           into = c("hrc_mmc_class_id", "hrc_mmc_class_string"),
+           sep = " ",
+           extra = "merge",
+           fill = "right")
+
+metadata <- metadata %>%
+  mutate(temp = hrc_mmc_subclass_name) %>%
+  separate(temp,
+           into = c("hrc_mmc_subclass_id", "hrc_mmc_subclass_string"),
+           sep = " ",
+           extra = "merge",
+           fill = "right")
+
+metadata <- metadata %>%
+  mutate(temp = hrc_mmc_supertype_name) %>%
+  separate(temp,
+           into = c("hrc_mmc_supertype_id", "hrc_mmc_supertype_string"),
+           sep = " ",
+           extra = "merge",
+           fill = "right")
+
+metadata <- metadata %>%
+  mutate(temp = hrc_mmc_cluster_name) %>%
+  separate(temp,
+           into = c("hrc_mmc_cluster_id", "hrc_mmc_cluster_string"),
+           sep = " ",
+           extra = "merge",
+           fill = "right")
+
+# add additional cell type information such as nt-type
+metadata <- merge(metadata,
+                  cl.df,
+                  by.x = "hrc_mmc_cluster_name",
+                  by.y = "cluster_id_label",
+                  all.x = T,
+                  all.y = F)
+
+# add region information for cell types
+metadata <- merge(metadata,
+                  cl.anat.df,
+                  by.x = "hrc_mmc_cluster_name",
+                  by.y = "cluster_id_label",
+                  all.x = T,
+                  all.y = F)
+
+metadata <- merge(metadata,
+                  sd.df,
+                  by.x = "leiden_res_1.4_knn_8",
+                  by.y = "Cluster_id",
+                  all.x = T,
+                  all.y = F)
+
+metadata_subset <- metadata %>% 
+  filter(final_qc_passed == T) %>%
+  filter(!is.na(spatial_domain_level_1)) %>% 
+  filter(spatial_domain_level_1 != "LQ") %>% 
+  filter(spatial_domain_level_1 != "Borders")
 
 # grab colors for the different levels of cell types. Thsoe will be used later for plotting
 ss <- "https://docs.google.com/spreadsheets/d/1a4URa_t3oc824vjIA8LcyYmJrv0-2Rm7Q5eJq42re2c/edit?usp=sharing"
@@ -260,10 +260,10 @@ region.mapping <- metadata_subset %>%
   drop_na()
 
 add.meta <- metadata_subset %>% 
-  select(flat_CDM_subclass_name, flat_CDM_subclass_id, flat_CDM_class_name) %>% 
+  select(hrc_mmc_subclass_name, hrc_mmc_subclass_id, hrc_mmc_class_name) %>% 
   group_by_all() %>% 
   unique %>% 
-  arrange(flat_CDM_class_name, flat_CDM_subclass_name)
+  arrange(hrc_mmc_class_name, hrc_mmc_subclass_name)
 
 
 ##################### plot example sections #####################
@@ -285,12 +285,12 @@ example_sections <- c("1199650941",
 
 plot_data <- metadata_subset %>% 
   filter(section %in% example_sections) %>% 
-  filter(x_reconstructed < 5.6)
+  filter(volume_x < 5.6)
 
 
 plot <- ggplot(plot_data,
-               aes(x=x_reconstructed,
-                   y=y_reconstructed,
+               aes(x=volume_x,
+                   y=volume_y,
                    color = spatial_domain_level_2
                )) +
   geom_point(size=.1,
@@ -313,8 +313,8 @@ ggsave(filename = "/results/sd_example_sections.png",
 
 
 plot <- ggplot(plot_data,
-               aes(x=x_reconstructed,
-                   y=y_reconstructed,
+               aes(x=volume_x,
+                   y=volume_y,
                    color = spatial_domain_level_1
                )) +
   geom_point(size=.1,
@@ -335,34 +335,10 @@ ggsave(filename = "/results/sd1_example_sections.png",
        height = 6, 
        dpi = 160)
 
-# ccf regions
-plot <- ggplot(plot_data,
-               aes(x=x_reconstructed,
-                   y=y_reconstructed,
-                   color = spatial_domain_level_2
-               )) +
-  geom_point(size=.1,
-             stroke=0,
-             shape=19,) +
-  coord_fixed() +
-  scale_color_manual(values=spatial_domain_palette) +
-  scale_y_reverse() +
-  theme(legend.position = "none") +
-  guides(color = "none") +
-  facet_wrap(~fct_rev(section), nrow = 2) +
-  theme_void() +
-  theme(strip.text = element_blank())
-
-ggsave(filename = "/results/sd_example_sections.png", 
-       plot = plot, 
-       width = 6,
-       height = 6, 
-       dpi = 160)
-
 
 plot <- ggplot(plot_data,
-               aes(x=x_reconstructed,
-                   y=y_reconstructed,
+               aes(x=volume_x,
+                   y=volume_y,
                    color = ccf_broad
                )) +
   geom_point(size=.1,
@@ -386,14 +362,14 @@ ggsave(filename = "/results/ccf_broad_example_sections.png",
 ##################### create heatmap for subclass dominace #####################
 
 dominance_scores <- metadata_subset %>%
-  count(spatial_domain_level_2, flat_CDM_subclass_name) %>%
+  dplyr::count(spatial_domain_level_2, hrc_mmc_subclass_name) %>%
   group_by(spatial_domain_level_2) %>%
   mutate(Dominance = n/max(n))
 
 dominance_scores$spatial_domain_level_2 <- factor(dominance_scores$spatial_domain_level_2, 
                                       levels = region.mapping$spatial_domain_level_2)
 
-subclass_dominance <- ggplot(dominance_scores, aes(x = flat_CDM_subclass_name, 
+subclass_dominance <- ggplot(dominance_scores, aes(x = hrc_mmc_subclass_name, 
                                                    y = spatial_domain_level_2, 
                                                    fill = Dominance)) +
   geom_tile() +
@@ -414,9 +390,9 @@ cols <- setNames(subclass_colors$subclass_color,
                  subclass_colors$subclass_id_label)
 
 l2plot <- ggplot(data=add.meta) + 
-  geom_tile(aes(x=flat_CDM_subclass_name, 
+  geom_tile(aes(x=hrc_mmc_subclass_name, 
                 y=1, 
-                fill=flat_CDM_subclass_name)) +
+                fill=hrc_mmc_subclass_name)) +
   scale_fill_manual(values=cols, 
                     name = "Subclass", 
                     limits = force) +
@@ -432,9 +408,9 @@ cols <- setNames(class_colors$class_color,
                  class_colors$class_id_label)
 
 clplot <- ggplot(data=add.meta) + 
-  geom_tile(aes(x=flat_CDM_subclass_name, 
+  geom_tile(aes(x=hrc_mmc_subclass_name, 
                 y=1, 
-                fill=flat_CDM_class_name)) +
+                fill=hrc_mmc_class_name)) +
   scale_fill_manual(values=cols, 
                     name = "Class", 
                     limits = force) +
@@ -498,12 +474,13 @@ ggsave(filename = "/results/sd_heatmap.pdf",
 ############## plot Jaccard overlay with broad landmark clusters ############
 
 # subset data to relevant features
-jaccard_df <- metadata_sis %>%
-  filter(final_filter == F) %>%
+jaccard_df <- metadata %>%
+  filter(final_qc_passed == T) %>%
   filter(!is.na(spatial_domain_level_1)) %>% 
-  filter(spatial_domain_level_1 != "LQ") %>% 
+  filter(spatial_domain_level_1 != "LQ") %>%
+  filter(spatial_domain_level_1 != "Borders") %>%
   filter(!is.na(broad_region)) %>%
-  select(cell_id,
+  select(production_cell_id,
          spatial_domain_level_1,
          spatial_domain_level_2,
          broad_region,
@@ -511,7 +488,7 @@ jaccard_df <- metadata_sis %>%
 
 # convert cell label to rownames
 jaccard_df <- jaccard_df %>% 
-  tibble::column_to_rownames("cell_id")
+  tibble::column_to_rownames("production_cell_id")
 
 # convert spatial domain level 1 and parcellation division to factors
 cl <- jaccard_df$broad_region
@@ -586,18 +563,19 @@ ggsave(filename = "/results/jaccard.pdf",
 
 
 # subset data to relevant features
-jaccard_df <- metadata_sis %>%
-  filter(final_filter == F) %>%
+jaccard_df <- metadata %>%
+  filter(final_qc_passed == T) %>%
   filter(!is.na(spatial_domain_level_2)) %>% 
   filter(!str_detect(spatial_domain_level_2, "LQ")) %>%
+  filter(!str_detect(spatial_domain_level_2, "Borders")) %>%
   filter(!is.na(registration_landmark)) %>%
-  select(cell_id,
+  select(production_cell_id,
          spatial_domain_level_2,
          registration_landmark)
 
 # convert cell label to rownames
 jaccard_df <- jaccard_df %>% 
-  tibble::column_to_rownames("cell_id")
+  tibble::column_to_rownames("production_cell_id")
 
 # convert spatial domain level 1 and parcellation division to factors
 cl <- jaccard_df$registration_landmark
@@ -671,18 +649,19 @@ ggsave(filename = "/results/jaccard_sd2.pdf",
 ################ compare to registration CCF level1 #########################
 
 # subset data to relevant features
-jaccard_df <- metadata_sis %>%
-  filter(final_filter == F) %>%
+jaccard_df <- metadata %>%
+  filter(final_qc_passed == T) %>%
   filter(!is.na(spatial_domain_level_1)) %>% 
   filter(!str_detect(spatial_domain_level_1, "LQ")) %>%
+  filter(!str_detect(spatial_domain_level_2, "Borders")) %>%
   filter(!is.na(CCF_level1)) %>%
-  select(cell_id,
+  select(production_cell_id,
          spatial_domain_level_1,
          CCF_level1)
 
 # convert cell label to rownames
 jaccard_df <- jaccard_df %>% 
-  tibble::column_to_rownames("cell_id")
+  tibble::column_to_rownames("production_cell_id")
 
 # convert spatial domain level 1 and parcellation division to factors
 cl <- jaccard_df$CCF_level1
@@ -756,18 +735,18 @@ ggsave(filename = "/results/jaccard_ccf_level1.pdf",
 ################ compare to registration CCF level2 #########################
 
 # subset data to relevant features
-jaccard_df <- metadata_sis %>%
-  filter(final_filter == F) %>%
+jaccard_df <- metadata %>%
+  filter(final_qc_passed == T) %>%
   filter(!is.na(spatial_domain_level_2)) %>% 
   filter(!str_detect(spatial_domain_level_2, "LQ")) %>%
   filter(!is.na(CCF_level2)) %>%
-  select(cell_id,
+  select(production_cell_id,
          spatial_domain_level_2,
          CCF_level2)
 
 # convert cell label to rownames
 jaccard_df <- jaccard_df %>% 
-  tibble::column_to_rownames("cell_id")
+  tibble::column_to_rownames("production_cell_id")
 
 # convert spatial domain level 1 and parcellation division to factors
 cl <- jaccard_df$CCF_level2
@@ -816,12 +795,12 @@ plot <- ggplot(tb.df,
   theme(panel.background = element_blank(),
         axis.text.x = element_text(angle = 45, 
                                    hjust = 1, 
-                                   size = 8),
+                                   size = 6),
         axis.ticks.x=element_blank(), #remove x axis ticks
         axis.title.x=element_blank(),
         axis.title.y=element_blank(),
         axis.text.y=element_text(hjust = 1, 
-                                 size = 8),  #remove y axis labels
+                                 size = 6),  #remove y axis labels
         axis.ticks.y=element_blank(), #remove y axis ticks
         panel.grid.major = element_line(color = "grey80"), # Major grid lines
         panel.grid.minor = element_line(color = "grey90"),  # Minor grid lines
@@ -833,6 +812,6 @@ plot <- ggplot(tb.df,
 
 ggsave(filename = "/results/jaccard_ccf_level2.pdf", 
        plot = plot, 
-       width = 7,
-       height = 5, 
+       width = 26,
+       height = 10, 
        dpi = 160)
