@@ -37,12 +37,12 @@ gs4_deauth()
 ######### load anno files ###########
 
 # load cluster taxonomy
-cl.df <- read_sheet("https://docs.google.com/spreadsheets/d/1T86EppILF-Q97OjJyd4R2FjUmPUrdYBUEbbiXqgWEoE/edit#gid=1639101745",sheet = "cl.df.v9_230722")
+#cl.df <- read_sheet("https://docs.google.com/spreadsheets/d/1T86EppILF-Q97OjJyd4R2FjUmPUrdYBUEbbiXqgWEoE/edit#gid=1639101745",sheet = "cl.df.v9_230722")
 # select only necessary columns 
-cl.df <- cl.df %>% 
-  dplyr::select(cluster_id_label,
-                nt_type_label,
-                nt_type_combo_label)
+#cl.df <- cl.df %>% 
+#  dplyr::select(cluster_id_label,
+#                nt_type_label,
+#                nt_type_combo_label)
 
 # load landmark annotation per cluster
 cl.anat.df <- read_sheet("https://docs.google.com/spreadsheets/d/1v7PDfLc_9vOcuz_WKk5ZiSUKjbu3xCux9VanVOA7QOE/edit?gid=612105623#gid=612105623", sheet = "cluster_region_annotation")
@@ -53,17 +53,11 @@ cl.anat.df <- cl.anat.df %>%
 
 ###### load color palettes
 
-broad_ccf_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "CCF_broad_region_color")
-broad_ccf_color_palette <- setNames(broad_ccf_color$color_hex_tripet, broad_ccf_color$ccf_broad)
+broad_ccf_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "broad_landmarks_anno")
+broad_ccf_color_palette <- setNames(broad_ccf_color$broad_region_color, broad_ccf_color$broad_region)
 # order by graph order
 broad_ccf_color <- broad_ccf_color %>% 
   arrange(desc(graph_order)) 
-
-spatial_domain_1_color <- read_sheet("https://docs.google.com/spreadsheets/d/1SdmQooCJtqq__n0D7INn12yTmIHwsJ6KeO5mGhR2OBU/edit?gid=0#gid=0", sheet = "spatial_domain_level_1_color")
-spatial_domain_1_palette <- setNames(spatial_domain_1_color$spatial_domain_level_1_color, spatial_domain_1_color$spatial_domain_level_1)
-
-spatial_domain_1_color <- spatial_domain_1_color %>% 
-  arrange(graph_order)
 
 # load ccf color
 ccf_color <- read_sheet("https://docs.google.com/spreadsheets/d/1QOhsYhlsk2KE2pZuSnEwUhEIG4mh782PcAgHrtJyRYI/edit?gid=0#gid=0", sheet = "CCFv3")
@@ -88,48 +82,39 @@ landmark_color <- landmark_color %>%
 
 
 # read in metadata file
-load("/scratch/638850_metadata_sis.rda")
-# load reconstructed coordinates
-load("/scratch/638850_reconstructed_coordinates_sis.rda")
+metadata <- fread("/data/merscope_638850_mouseadult_registered_v2/whole_dataset/mouse_638850_registered.csv")
 
-metadata_sis <- merge(metadata_sis,
-                      coordinates_sis,
-                      by = 0)
+metadata <- metadata %>%
+  mutate_at(vars(CCF_level1, CCF_level2), ~ na_if(., ""))
 
-metadata_sis <- merge(metadata_sis,
-                      cl.df,
-                      by.x = "flat_CDM_cluster_name",
-                      by.y = "cluster_id_label",
-                      all.x = T,
-                      all.y = F)
 
-metadata_sis <- merge(metadata_sis,
-                      cl.anat.df,
-                      by.x = "flat_CDM_cluster_name",
-                      by.y = "cluster_id_label",
-                      all.x = T,
-                      all.y = F)
+# add region information for cell types
+metadata <- merge(metadata,
+                  cl.anat.df,
+                  by.x = "hrc_mmc_cluster_name",
+                  by.y = "cluster_id_label",
+                  all.x = T,
+                  all.y = F)
 
-metadata_subset <- metadata_sis %>% 
-  filter(final_filter == F) %>%
+
+metadata_subset <- metadata %>% 
+  filter(final_qc_passed == T) %>%
   filter(!is.na(structure_acronym)) %>%
-  select(cell_id,
+  select(production_cell_id,
          section,
-         flat_CDM_class_name,
-         flat_CDM_subclass_name,
-         flat_CDM_supertype_name,
-         flat_CDM_cluster_name,
-         nt_type_label,
-         nt_type_combo_label,
+         hrc_mmc_class_name,
+         hrc_mmc_subclass_name,
+         hrc_mmc_supertype_name,
+         hrc_mmc_cluster_name,
          structure_acronym,
          structure_id,
          broad_region,
          registration_landmark,
          CCF_level1,
          CCF_level2,
-         x_reconstructed,
-         y_reconstructed,
-         z_reconstructed)
+         volume_x,
+         volume_y,
+         volume_z)
 
 ############## plot Jaccard overlay with broad landmark clusters ############
 
@@ -137,13 +122,13 @@ metadata_subset <- metadata_sis %>%
 jaccard_df <- metadata_subset %>%
   filter(!is.na(CCF_level1)) %>% 
   filter(!is.na(broad_region)) %>%
-  select(cell_id,
+  select(production_cell_id,
          CCF_level1,
          broad_region)
 
 # convert cell label to rownames
 jaccard_df <- jaccard_df %>% 
-  tibble::column_to_rownames("cell_id")
+  tibble::column_to_rownames("production_cell_id")
 
 # convert spatial domain level 1 and parcellation division to factors
 cl <- jaccard_df$broad_region
@@ -177,7 +162,7 @@ tb.df$cl <- factor(tb.df$cl,
                    levels = ccf_color$acronym) 
 
 tb.df$ref.cl <- factor(tb.df$ref.cl,
-                       levels = broad_ccf_color$ccf_broad) 
+                       levels = broad_ccf_color$broad_region) 
 
 tb.df <- tb.df %>% 
   drop_na()
@@ -220,13 +205,13 @@ ggsave(filename = "/results/jaccard_ccf_level1.pdf",
 jaccard_df <- metadata_subset %>%
   filter(!is.na(CCF_level2)) %>% 
   filter(!is.na(registration_landmark)) %>%
-  select(cell_id,
+  select(production_cell_id,
          CCF_level2,
          registration_landmark)
 
 # convert cell label to rownames
 jaccard_df <- jaccard_df %>% 
-  tibble::column_to_rownames("cell_id")
+  tibble::column_to_rownames("production_cell_id")
 
 # convert spatial domain level 1 and parcellation division to factors
 cl <- jaccard_df$registration_landmark
@@ -290,27 +275,12 @@ plot <- ggplot(tb.df,
                        high = "darkblue") + 
   scale_size(range = c(0, 5)) 
 
-ggsave(filename = "/results/jaccard_ccf_level1.pdf", 
+ggsave(filename = "/results/jaccard_ccf_level2.pdf", 
        plot = plot, 
        width = 7,
        height = 5, 
        dpi = 160)
 
-
-
-# pick example sections
-example_sections <- c("1199650941",
-                      "1199650950",
-                      "1199650965",
-                      "1199650975",
-                      "1199650999",
-                      "1199651012",
-                      "1199651024",
-                      "1199651039",
-                      "1199651057",
-                      "1199651072",
-                      "1199651084",
-                      "1199651103")
 
 
 

@@ -103,7 +103,11 @@ neuronal_classes <- c("01 IT-ET Glut",
                       "29 CB Glut")
 
 cl.df <- read_sheet("https://docs.google.com/spreadsheets/d/1T86EppILF-Q97OjJyd4R2FjUmPUrdYBUEbbiXqgWEoE/edit#gid=1639101745",sheet = "cl.df.v9_230722")
-# select only necessary columns (labels plus max region and ratio)
+# select only necessary columns 
+rnaseq_anno <- cl.df %>% 
+  select(subclass_id_label,
+         class_id_label)
+
 cl.df <- cl.df %>% 
   dplyr::select(cluster_id_label,
                 nt_type_label,
@@ -173,60 +177,62 @@ proportion_colors <- c('#005DFFFF',
 ############## process metadata file ####################
 
 # read in metadata file
-load("/scratch/687997_metadata_sis.rda")
+metadata <- fread("/data/merscope_687997_mouseadult_registered_v2/whole_dataset/mouse_687997_registered.csv")
 
-metadata_sis <- metadata_sis %>%
-  mutate(temp = flat_CDM_class_name) %>%
+metadata <- metadata %>%
+  mutate_at(vars(CCF_level1, CCF_level2), ~ na_if(., ""))
+
+metadata <- metadata %>%
+  mutate(temp = hrc_mmc_class_name) %>%
   separate(temp, 
-           into = c("flat_CDM_class_id", "flat_CDM_class_string"), 
+           into = c("hrc_mmc_class_id", "hrc_mmc_class_string"), 
            sep = " ", 
            extra = "merge", 
            fill = "right")
 
-metadata_sis <- metadata_sis %>%
-  mutate(temp = flat_CDM_subclass_name) %>%
+metadata <- metadata %>%
+  mutate(temp = hrc_mmc_subclass_name) %>%
   separate(temp, 
-           into = c("flat_CDM_subclass_id", "flat_CDM_subclass_string"), 
+           into = c("hrc_mmc_subclass_id", "hrc_mmc_subclass_string"), 
            sep = " ", 
            extra = "merge", 
            fill = "right")
 
-metadata_sis <- metadata_sis %>%
-  mutate(temp = flat_CDM_supertype_name) %>%
+metadata <- metadata %>%
+  mutate(temp = hrc_mmc_supertype_name) %>%
   separate(temp, 
-           into = c("flat_CDM_supertype_id", "flat_CDM_supertype_string"), 
+           into = c("hrc_mmc_supertype_id", "hrc_mmc_supertype_string"), 
            sep = " ", 
            extra = "merge", 
            fill = "right")
 
-metadata_sis <- metadata_sis %>%
-  mutate(temp = flat_CDM_cluster_name) %>%
+metadata <- metadata %>%
+  mutate(temp = hrc_mmc_cluster_name) %>%
   separate(temp, 
-           into = c("flat_CDM_cluster_id", "flat_CDM_cluster_string"), 
+           into = c("hrc_mmc_cluster_id", "hrc_mmc_cluster_string"), 
            sep = " ", 
            extra = "merge", 
            fill = "right")
 
-metadata_sis <- merge(metadata_sis,
-                      cl.df,
-                      by.x = "flat_CDM_cluster_name",
-                      by.y = "cluster_id_label",
-                      all.x = T,
-                      all.y = F)
+metadata <- merge(metadata,
+                  cl.df,
+                  by.x = "hrc_mmc_cluster_name",
+                  by.y = "cluster_id_label",
+                  all.x = T,
+                  all.y = F)
 
-metadata_subset <- metadata_sis %>% 
-  filter(final_filter == F) %>% 
-  select(cells,
+metadata_subset <- metadata %>% 
+  filter(final_qc_passed == T) %>% 
+  select(production_cell_id,
          section,
-         leiden_res_1.2_knn_8,
-         flat_CDM_class_name,
-         flat_CDM_class_id,
-         flat_CDM_subclass_name,
-         flat_CDM_subclass_id,
-         flat_CDM_supertype_name,
-         flat_CDM_supertype_id,
-         flat_CDM_cluster_label,
-         flat_CDM_cluster_id,
+         hrc_mmc_class_name,
+         hrc_mmc_class_id,
+         hrc_mmc_subclass_name,
+         hrc_mmc_subclass_id,
+         hrc_mmc_supertype_name,
+         hrc_mmc_supertype_id,
+         hrc_mmc_cluster_label,
+         hrc_mmc_cluster_id,
          nt_type_label,
          nt_type_combo_label,
          structure_acronym,
@@ -247,8 +253,8 @@ metadata_subset <- merge(metadata_subset,
 
 # assign neuron/glia metadata_subset to cells
 metadata_subset <- metadata_subset %>% 
-  mutate(N_G_ratio = case_when(flat_CDM_class_name %in% neuronal_classes ~ "neuronal",
-                               flat_CDM_subclass_name %in% glia_sc ~ "glial",
+  mutate(N_G_ratio = case_when(hrc_mmc_class_name %in% neuronal_classes ~ "neuronal",
+                               hrc_mmc_subclass_name %in% glia_sc ~ "glial",
                                TRUE ~ NA_character_))
 
 ############################### filter metadata ################################
@@ -257,7 +263,57 @@ metadata_subset <- metadata_subset %>%
 
 # remove cells not assigned to one of the major regions
 metadata_subset <- metadata_subset %>% 
-  filter(CCF_level2 != "NA")
+  filter(CCF_level1 != "NA") %>% 
+  filter(CCF_level1 != "" )
+
+################### code to clean out bad alignment cells #################
+# calculate number of cells per broad region
+subclass_per_region_level1 <- dplyr::count(metadata_subset, hrc_mmc_subclass_name, CCF_level1)
+subclass_per_region_level1 <- spread(subclass_per_region_level1, key = CCF_level1, value = n)
+subclass_per_region_level1 <- subclass_per_region_level1 %>% 
+  replace(is.na(.), 0)
+
+# calculate percentage of cells per subclass per broad region
+subclass_per_region_level1_perc <- subclass_per_region_level1 %>%
+  mutate_at(vars(-hrc_mmc_subclass_name), list(~ ./rowSums(subclass_per_region_level1[, -1])))
+
+# convert subclass_id_label to row names
+subclass_per_region_level1_perc <- subclass_per_region_level1_perc %>% 
+  tibble::column_to_rownames("hrc_mmc_subclass_name")
+
+# filter out cells if their percentage in a region is less than 5%
+indices <- which(subclass_per_region_level1_perc > 0 & subclass_per_region_level1_perc < 0.05, arr.ind = TRUE)
+row_names <- rownames(subclass_per_region_level1_perc)[indices[,1]]
+col_names <- colnames(subclass_per_region_level1_perc)[indices[,2]]
+
+# make data frame with subclass name and region that have less than 5%
+bad_alignment <- cbind(row_names,
+                       col_names)
+bad_alignment <- as.data.frame(bad_alignment)
+colnames(bad_alignment) <- c("hrc_mmc_subclass_name","CCF_level1")
+
+# extend to cluster_id_label
+# merge data frames
+bad_alignment <- merge(bad_alignment,
+                       rnaseq_anno,
+                       by.x = "hrc_mmc_subclass_name",
+                       by.y = "subclass_id_label",
+                       all = T)
+
+# only keep neuronal classes
+bad_alignment <- bad_alignment %>% 
+  filter(class_id_label %in% neuronal_classes) %>% 
+  select(hrc_mmc_subclass_name,
+         CCF_level1) %>% 
+  unique()
+
+# extract cells with bad alignment
+bad_cells <- metadata_subset %>% 
+  inner_join(bad_alignment, by = c("hrc_mmc_subclass_name", "CCF_level1")) %>% 
+  pull(production_cell_id)
+
+metadata_subset <- metadata_subset %>% 
+  filter(!production_cell_id %in% bad_cells)
 
 ############ create helper data frames for plotting ####################
 region.mapping <- metadata_subset %>% 
@@ -265,7 +321,8 @@ region.mapping <- metadata_subset %>%
   group_by(CCF_level2) %>% 
   slice(1) %>% 
   arrange(desc(graph_order)) %>% 
-  drop_na()
+  drop_na() %>% 
+  filter(CCF_level2 != "")
 
 region.mapping_broad <- metadata_subset %>% 
   select(CCF_level1,graph_order) %>% 
@@ -275,64 +332,68 @@ region.mapping_broad <- metadata_subset %>%
   drop_na()
 
 add.meta <- metadata_subset %>% 
-  select(flat_CDM_subclass_name, flat_CDM_subclass_id, flat_CDM_class_name) %>% 
+  select(hrc_mmc_subclass_name, hrc_mmc_subclass_id, hrc_mmc_class_name) %>% 
   group_by_all() %>% 
   unique %>% 
-  arrange(flat_CDM_class_name, flat_CDM_subclass_name)
+  arrange(hrc_mmc_class_name, hrc_mmc_subclass_name)
 
 add.meta_st <- metadata_subset %>% 
-  select(flat_CDM_supertype_name, flat_CDM_supertype_id, flat_CDM_class_name) %>% 
+  select(hrc_mmc_supertype_name, hrc_mmc_supertype_id, hrc_mmc_class_name) %>% 
   group_by_all() %>% 
   unique %>% 
-  arrange(flat_CDM_class_name, flat_CDM_supertype_name)
+  arrange(hrc_mmc_class_name, hrc_mmc_supertype_name)
 
 ############ calculate cell types per region at different levels #############
 # calculates subclass per region
-subclass_per_region <- dplyr::count(metadata_subset, flat_CDM_subclass_name, CCF_level2)
+subclass_per_region <- dplyr::count(metadata_subset, hrc_mmc_subclass_name, CCF_level2)
 subclass_per_region <- spread(subclass_per_region, key = CCF_level2, value = n)
 subclass_per_region <- subclass_per_region %>% 
   replace(is.na(.), 0)
 
+subclass_per_region$`<NA>` <- NULL
+
 subclass_per_region_perc <- subclass_per_region %>%
-  mutate(across(-flat_CDM_subclass_name, ~ ./rowSums(subclass_per_region[, -1])))
+  mutate(across(-hrc_mmc_subclass_name, ~ ./rowSums(subclass_per_region[, -1])))
 
 subclass_per_region_norm <- subclass_per_region %>% 
-  tibble::column_to_rownames(var = "flat_CDM_subclass_name")
+  tibble::column_to_rownames(var = "hrc_mmc_subclass_name")
 
 subclass_per_region_norm <- t(t(subclass_per_region_norm) / colSums(subclass_per_region_norm))
 
 subclass_per_region_norm_max <- subclass_per_region %>% 
-  tibble::column_to_rownames(var = "flat_CDM_subclass_name")
+  tibble::column_to_rownames(var = "hrc_mmc_subclass_name")
 
 subclass_per_region_norm_max <- t(t(subclass_per_region_norm_max) / apply(subclass_per_region_norm_max, 1 ,max))
 
 subclass_per_region_norm_max <- as.data.frame(subclass_per_region_norm_max)
 
 subclass_per_region_norm_max <- subclass_per_region_norm_max %>% 
-  tibble::rownames_to_column(var = "flat_CDM_subclass_name")
+  tibble::rownames_to_column(var = "hrc_mmc_subclass_name")
 
 subclass_per_region_norm_max_long <- melt(subclass_per_region_norm_max, 
-                                          id.vars = "flat_CDM_subclass_name")
+                                          id.vars = "hrc_mmc_subclass_name")
 
 # calculates supertype per region
-supertype_per_region <- dplyr::count(metadata_subset, flat_CDM_supertype_name, CCF_level2)
+supertype_per_region <- dplyr::count(metadata_subset, hrc_mmc_supertype_name, CCF_level2)
 supertype_per_region <- spread(supertype_per_region, key = CCF_level2, value = n)
 supertype_per_region <- supertype_per_region %>% 
   replace(is.na(.), 0)
 
+supertype_per_region$`<NA>` <- NULL
+
 supertype_per_region_perc <- supertype_per_region %>%
-  mutate(across(-flat_CDM_supertype_name, ~ ./rowSums(supertype_per_region[, -1])))
+  mutate(across(-hrc_mmc_supertype_name, ~ ./rowSums(supertype_per_region[, -1])))
 
 
 supertype_per_region_norm <- supertype_per_region %>% 
-  tibble::column_to_rownames(var = "flat_CDM_supertype_name")
+  tibble::column_to_rownames(var = "hrc_mmc_supertype_name")
 
 supertype_per_region_norm <- t(t(supertype_per_region_norm) / colSums(supertype_per_region_norm))
 
 ####################### plot nt type distribution ##############################
 metadata_nt <- metadata_subset %>%
   filter(nt_type_label != "NA") %>% 
-  filter(flat_CDM_class_name %in% neuronal_classes) %>%
+  filter(hrc_mmc_class_name %in% neuronal_classes) %>%
   select(CCF_level1,
          CCF_level2,
          nt_type_label)
@@ -365,7 +426,7 @@ E_I_level_1 <- ggplot(data = metadata_nt, aes(x = fct_rev(CCF_level1), fill = nt
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-ggsave(filename = "/results/EI_ratio.pdf", 
+ggsave(filename = "/results/687997/EI_ratio.pdf", 
        plot = E_I_level_1, 
        width = 10,
        height = 5, 
@@ -424,7 +485,7 @@ N_G <- ggplot(data = metadata_ng,
                                hjust = 1)
   )
 
-ggsave(filename = "/results/NG_ratio.pdf", 
+ggsave(filename = "/results/687997/NG_ratio.pdf", 
        plot = N_G, 
        width = 10,
        height = 5, 
@@ -472,17 +533,18 @@ region_cell_count <- ggplot(cell_count_per_region,
 ####################### create base heatmap #####################
 
 dominance_scores <- metadata_subset %>%
-  count(CCF_level2, flat_CDM_subclass_name) %>%
+  dplyr::count(CCF_level2, hrc_mmc_subclass_name) %>%
   group_by(CCF_level2) %>%
-  mutate(Dominance = n/max(n))
+  mutate(Dominance = n/max(n)) %>% 
+  drop_na()
 
 dominance_scores$CCF_level2 <- factor(dominance_scores$CCF_level2, 
                                       levels = region.mapping$CCF_level2)
 
-dominance_scores$subclass_id_label <- factor(dominance_scores$flat_CDM_subclass_name, 
-                                             levels = add.meta$flat_CDM_subclass_name)
+dominance_scores$subclass_id_label <- factor(dominance_scores$hrc_mmc_subclass_name, 
+                                             levels = add.meta$hrc_mmc_subclass_name)
 
-subclass_dominance <- ggplot(dominance_scores, aes(x = flat_CDM_subclass_name, 
+subclass_dominance <- ggplot(dominance_scores, aes(x = hrc_mmc_subclass_name, 
                                                    y = CCF_level2, 
                                                    fill = Dominance)) +
   geom_tile() +
@@ -508,7 +570,7 @@ for_heatmap <- for_heatmap %>%
 for_heatmap <- for_heatmap %>% 
   drop_na()
 
-colnames(for_heatmap) <- c("flat_CDM_subclass_name",
+colnames(for_heatmap) <- c("hrc_mmc_subclass_name",
                            "CCF_level2",
                            "perc_subclass", 
                            "CCF_level1",
@@ -522,22 +584,22 @@ for_heatmap$CCF_level2 <- factor(for_heatmap$CCF_level2,
                                  levels = region.mapping$CCF_level2)
 
 # retain order of supertype_id_label 
-hm_sc <- data.frame(flat_CDM_subclass_name = unique(for_heatmap$flat_CDM_subclass_name))
+hm_sc <- data.frame(hrc_mmc_subclass_name = unique(for_heatmap$hrc_mmc_subclass_name))
 hm_sc <- hm_sc %>% 
   left_join(add.meta) %>% 
   drop_na()
 
-hm_sc$flat_CDM_subclass_name <- factor(hm_sc$flat_CDM_subclass_name, 
-                                  levels = add.meta$flat_CDM_subclass_name)
+hm_sc$hrc_mmc_subclass_name <- factor(hm_sc$hrc_mmc_subclass_name, 
+                                      levels = add.meta$hrc_mmc_subclass_name)
 
 # subclass tiles
 cols <- setNames(subclass_colors$subclass_color, 
                  subclass_colors$subclass_id_label)
 
 l2plot <- ggplot(data=hm_sc) + 
-  geom_tile(aes(x=flat_CDM_subclass_name, 
+  geom_tile(aes(x=hrc_mmc_subclass_name, 
                 y=1, 
-                fill=flat_CDM_subclass_name)) +
+                fill=hrc_mmc_subclass_name)) +
   scale_fill_manual(values=cols, 
                     name = "Subclass", 
                     limits = force) +
@@ -552,9 +614,9 @@ cols <- setNames(class_colors$class_color,
                  class_colors$class_id_label)
 
 clplot <- ggplot(data=hm_sc) + 
-  geom_tile(aes(x=flat_CDM_subclass_name, 
+  geom_tile(aes(x=hrc_mmc_subclass_name, 
                 y=1, 
-                fill=flat_CDM_class_name)) +
+                fill=hrc_mmc_class_name)) +
   scale_fill_manual(values=cols, 
                     name = "Class", 
                     limits = force) +
@@ -571,7 +633,7 @@ cols <- setNames(class_colors$class_color,
                  class_colors$class_id_label)
 
 clplot <- ggplot(data=hm_sc) + 
-  geom_tile(aes(x=flat_CDM_subclass_name, y=1, fill=flat_CDM_class_name)) +
+  geom_tile(aes(x=hrc_mmc_subclass_name, y=1, fill=hrc_mmc_class_name)) +
   scale_fill_manual(values=cols, name = "Class", limits = force) +
   theme_void() +
   ylab( "Class") +
@@ -625,32 +687,32 @@ lab2 <- ggplot(data=ylabs.2, aes(y=CCF_level2,
 
 ###################### calculate gini coefficient for subclass ########################
 gini_coefficient <- apply(subclass_per_region[,-1], 1, calcGini)
-names(gini_coefficient) <- subclass_per_region$flat_CDM_subclass_name
+names(gini_coefficient) <- subclass_per_region$hrc_mmc_subclass_name
 gini_coefficient <- as.data.frame(gini_coefficient)
 
 cell_count <- rowSums(subclass_per_region[,-1])
-names(cell_count) <- subclass_per_region$flat_CDM_subclass_name
+names(cell_count) <- subclass_per_region$hrc_mmc_subclass_name
 cell_count <- as.data.frame(cell_count)
 
 subclass_meta <- merge(gini_coefficient,
                        cell_count,
                        by=0)
 
-colnames(subclass_meta)[1] <- "flat_CDM_subclass_name"
+colnames(subclass_meta)[1] <- "hrc_mmc_subclass_name"
 
 subclass_meta <- merge(subclass_meta,
                        add.meta,
-                       by = "flat_CDM_subclass_name",
+                       by = "hrc_mmc_subclass_name",
                        all.x = T,
                        all.y = F)
 
 subclass_meta$name <- "Name"
 
-subclass_meta$flat_CDM_subclass_name <- factor(subclass_meta$flat_CDM_subclass_name, 
-                                          levels = add.meta$flat_CDM_subclass_name)
+subclass_meta$hrc_mmc_subclass_name <- factor(subclass_meta$hrc_mmc_subclass_name, 
+                                              levels = add.meta$hrc_mmc_subclass_name)
 
 subclass_cell_count <- ggplot(subclass_meta, 
-                              aes(x = flat_CDM_subclass_name, 
+                              aes(x = hrc_mmc_subclass_name, 
                                   y = log10(cell_count))) +
   geom_bar(stat = "identity", fill = "Grey") +
   ylab( "cells per subclass") +
@@ -670,42 +732,42 @@ gini_coefficient_norm <- apply(subclass_per_region_norm, 1, calcGini)
 gini_coefficient_norm <- as.data.frame(gini_coefficient_norm)
 colnames(gini_coefficient_norm)[1] <- "gini_coefficient_norm"
 gini_coefficient_norm <- gini_coefficient_norm %>% 
-  tibble::rownames_to_column(var = "flat_CDM_subclass_name")
+  tibble::rownames_to_column(var = "hrc_mmc_subclass_name")
 
 
 subclass_meta <- merge(subclass_meta,
                        gini_coefficient_norm,
-                       by = "flat_CDM_subclass_name",
+                       by = "hrc_mmc_subclass_name",
                        all.x = T,
                        all.y = T)
 
-subclass_meta$flat_CDM_subclass_name <- factor(subclass_meta$flat_CDM_subclass_name, 
-                                          levels = add.meta$flat_CDM_subclass_name)
+subclass_meta$hrc_mmc_subclass_name <- factor(subclass_meta$hrc_mmc_subclass_name, 
+                                              levels = add.meta$hrc_mmc_subclass_name)
 
 subclass_meta_long <- tidyr::gather(subclass_meta, 
-                                    key = "flat_CDM_subclass_name", 
+                                    key = "hrc_mmc_subclass_name", 
                                     value = "value", 
                                     -gini_coefficient_norm, 
                                     -cell_count)
 
 ###################### calculate gini coefficient for supertypes ########################
 gini_coefficient_st <- apply(supertype_per_region[,-1], 1, calcGini)
-names(gini_coefficient_st) <- supertype_per_region$flat_CDM_supertype_name
+names(gini_coefficient_st) <- supertype_per_region$hrc_mmc_supertype_name
 gini_coefficient_st <- as.data.frame(gini_coefficient_st)
 
 cell_count_st <- rowSums(supertype_per_region[,-1])
-names(cell_count_st) <- supertype_per_region$flat_CDM_supertype_name
+names(cell_count_st) <- supertype_per_region$hrc_mmc_supertype_name
 cell_count_st <- as.data.frame(cell_count_st)
 
 supertype_meta <- merge(gini_coefficient_st,
                         cell_count_st,
                         by=0)
 
-colnames(supertype_meta)[1] <- "flat_CDM_supertype_name"
+colnames(supertype_meta)[1] <- "hrc_mmc_supertype_name"
 
 supertype_meta <- merge(supertype_meta,
                         add.meta_st,
-                        by = "flat_CDM_supertype_name",
+                        by = "hrc_mmc_supertype_name",
                         all.x = T,
                         all.y = F)
 
@@ -717,17 +779,17 @@ gini_coefficient_norm_st <- apply(supertype_per_region_norm, 1, calcGini)
 gini_coefficient_norm_st <- as.data.frame(gini_coefficient_norm_st)
 colnames(gini_coefficient_norm_st)[1] <- "gini_coefficient_norm"
 gini_coefficient_norm_st <- gini_coefficient_norm_st %>% 
-  tibble::rownames_to_column(var = "flat_CDM_supertype_name")
+  tibble::rownames_to_column(var = "hrc_mmc_supertype_name")
 
 
 supertype_meta <- merge(supertype_meta,
                         gini_coefficient_norm_st,
-                        by = "flat_CDM_supertype_name",
+                        by = "hrc_mmc_supertype_name",
                         all.x = T,
                         all.y = T)
 
-supertype_meta$flat_CDM_supertype_name <- factor(supertype_meta$flat_CDM_supertype_name, 
-                                                 levels = add.meta_st$flat_CDM_supertype_name)
+supertype_meta$hrc_mmc_supertype_name <- factor(supertype_meta$hrc_mmc_supertype_name, 
+                                                levels = add.meta_st$hrc_mmc_supertype_name)
 
 ################# plot distribution for a gini coefficient ###################
 gini_colors <- paletteer_c("grDevices::terrain.colors", 30)
@@ -740,7 +802,7 @@ gini_distribution <- ggplot(subclass_meta,
   theme_minimal() +
   scale_fill_gradientn(colors = gini_colors)
 
-ggsave(filename = "/results/gini_sc.pdf", 
+ggsave(filename = "/results/687997/gini_sc.pdf", 
        plot = gini_distribution, 
        width = 10,
        height = 5, 
@@ -755,7 +817,7 @@ gini_distribution_st <- ggplot(supertype_meta,
   scale_fill_gradientn(colors = gini_colors)
 
 
-ggsave(filename = "/results/gini_st.pdf", 
+ggsave(filename = "/results/687997/gini_st.pdf", 
        plot = gini_distribution, 
        width = 10,
        height = 5, 
@@ -763,7 +825,7 @@ ggsave(filename = "/results/gini_st.pdf",
 
 gini_plot <- ggplot(data=subclass_meta_long) + 
   geom_tile(aes(x=value, 
-                y=flat_CDM_subclass_name, 
+                y=hrc_mmc_subclass_name, 
                 fill=gini_coefficient_norm)) +
   scale_fill_gradientn(colors = gini_colors) +
   theme_void() +
@@ -778,14 +840,14 @@ cols <- setNames(class_colors$class_color,
 
 gini_distribution_class <- ggplot(subclass_meta, 
                                   aes(x = gini_coefficient_norm, 
-                                      y = flat_CDM_class_name, 
-                                      fill = flat_CDM_class_name)) +
+                                      y = hrc_mmc_class_name, 
+                                      fill = hrc_mmc_class_name)) +
   geom_density_ridges(alpha = 0.7) +
   scale_fill_manual(values=cols) +
   theme_minimal() +
   theme(legend.position = "none")
 
-ggsave(filename = "/results/gini_sc_by_class.pdf", 
+ggsave(filename = "/results/687997/gini_sc_by_class.pdf", 
        plot = gini_distribution_class, 
        width = 10,
        height = 5, 
@@ -796,14 +858,14 @@ cols <- setNames(class_colors$class_color,
 
 st_gini_distribution_class <- ggplot(supertype_meta, 
                                      aes(x = gini_coefficient_norm, 
-                                         y = flat_CDM_class_name, 
-                                         fill = flat_CDM_class_name)) +
+                                         y = hrc_mmc_class_name, 
+                                         fill = hrc_mmc_class_name)) +
   geom_density_ridges(alpha = 0.7) +
   scale_fill_manual(values=cols) +
   theme_minimal() +
   theme(legend.position = "none")
 
-ggsave(filename = "/results/gini_st_by_class.pdf", 
+ggsave(filename = "/results/687997/gini_st_by_class.pdf", 
        plot = gini_distribution_class, 
        width = 10,
        height = 5, 
@@ -813,7 +875,7 @@ ggsave(filename = "/results/gini_st_by_class.pdf",
 subclass_abundance <- subclass_per_region[, 2:ncol(subclass_per_region)]
 
 shann_d_values <- subclass_per_region %>%
-  column_to_rownames(var = "flat_CDM_subclass_name") %>%
+  column_to_rownames(var = "hrc_mmc_subclass_name") %>%
   summarise(across(everything(),
                    vegan::diversity,
                    index = "shannon")) %>%
@@ -841,7 +903,7 @@ shann_d_values$name <- "Name"
 supertype_abundance <- supertype_per_region[, 2:ncol(subclass_per_region)]
 
 shann_d_values_st <- supertype_per_region %>%
-  column_to_rownames(var = "flat_CDM_supertype_name") %>%
+  column_to_rownames(var = "hrc_mmc_supertype_name") %>%
   summarise(across(everything(),
                    vegan::diversity,
                    index = "shannon")) %>%
@@ -877,7 +939,7 @@ shann_d_distribution <- ggplot(shann_d_values,
   theme_minimal() +
   scale_fill_gradientn(colors = shannon_colors)
 
-ggsave(filename = "/results/shannon_dist.pdf", 
+ggsave(filename = "/results/687997/shannon_dist.pdf", 
        plot = shann_d_distribution, 
        width = 10,
        height = 5, 
@@ -897,7 +959,7 @@ shann_d_distribution_ccf <- ggplot(shann_d_values,
   theme_minimal() +
   theme(legend.position = "none")
 
-ggsave(filename = "/results/shannon_dist_by_region.pdf", 
+ggsave(filename = "/results/687997/shannon_dist_by_region.pdf", 
        plot = shann_d_distribution_ccf, 
        width = 10,
        height = 5, 
@@ -917,7 +979,7 @@ shann_d_distribution_ccf_st <- ggplot(shann_d_values_st,
   theme_minimal() +
   theme(legend.position = "none")
 
-ggsave(filename = "/results/shannon_dist_by_region_st.pdf", 
+ggsave(filename = "/results/687997/shannon_dist_by_region_st.pdf", 
        plot = shann_d_distribution_ccf_st, 
        width = 10,
        height = 5, 
@@ -955,10 +1017,8 @@ final_subclass_dominance <- subclass_dominance %>%
   insert_right(shannon_plot_st, width=0.02) %>%
   insert_right(region_cell_count, width=0.06)
 
-ggsave(filename = "/results/638850_heatmap.pdf", 
+ggsave(filename = "/results/687997/heatmap.pdf", 
        plot = final_subclass_dominance, 
        width = 10,
        height = 7, 
        dpi = 300)
-
-
