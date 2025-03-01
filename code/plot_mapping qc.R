@@ -34,18 +34,9 @@ supertype_color_palette <- setNames(supertype_colors$supertype_color_new, supert
 cluster_colors <- read_sheet(ss, sheet="clusters")
 cluster_color_palette <- setNames(cluster_colors$cluster_color, cluster_colors$cluster_label)
 
-# load corrected cell coordinates
-load("/scratch/coordinates_sis.rda")
-# load data segmented with in-house cellpose model
-load("/scratch/metadata_sis.rda")
+# read in metadata file
+metadata <- fread("/data/merscope_638850_mouseadult_registered_v2/whole_dataset/mouse_638850_registered.csv")
 
-# add rotated coordinates to metadata
-metadata_sis <- merge(metadata_sis,
-                      coordinates_sis,
-                      by = 0)
-
-metadata_sis <- metadata_sis %>% 
-  rownames_to_column( var = "cell_label")
 
 filter_palette <- c("grey","red")
 
@@ -69,49 +60,42 @@ example_supertypes <- c("0682 RN Spp1 Glut_1",
                         "0056 MEA Slc17a7 Glut_2")
 
 # filter out relevant columns
-filtered_metadata_sis <- metadata_sis %>%
-  filter(basic_qc_filter == F) %>% 
-  filter(doublets_filter == F) %>%
-  filter(flat_CDM_supertype_name %in% example_supertypes) %>% 
-  select(cell_label,
-         x_coordinate,
-         y_coordinate,
+filtered_metadata <- metadata %>%
+  filter(basic_qc_passed == T) %>% 
+  filter(doublets_qc_passed == T) %>%
+  filter(hrc_mmc_supertype_name %in% example_supertypes) %>% 
+  select(production_cell_id,
+         volume_x,
+         volume_y,
          section,
-         basic_qc_filter,
-         doublets_filter,
-         final_filter,
-         is_bimodal_cluster,
-         flat_CDM_class_name,
-         flat_CDM_class_avg_correlation,
-         CDM_class_color,
-         flat_CDM_subclass_name,
-         flat_CDM_subclass_avg_correlation,
-         CDM_subclass_color,
-         flat_CDM_supertype_name,
-         flat_CDM_supertype_avg_correlation,
-         flat_CDM_supertype_thr_criteria,
-         CDM_supertype_color,
-         flat_CDM_cluster_name,
-         flat_CDM_cluster_avg_correlation,
-         flat_CDM_cluster_thr,
-         flat_CDM_cluster_thr_criteria,
-         flat_CDM_thr,
-         CDM_cluster_color)
+         final_qc_passed,
+         hrc_mmc_class_name,
+         hrc_mmc_class_avg_correlation,
+         hrc_mmc_subclass_name,
+         hrc_mmc_subclass_avg_correlation,
+         hrc_mmc_supertype_name,
+         hrc_mmc_supertype_avg_correlation,
+         hrc_mmc_supertype_thr_criteria,
+         hrc_mmc_cluster_name,
+         hrc_mmc_cluster_avg_correlation,
+         hrc_mmc_cluster_thr,
+         hrc_mmc_cluster_thr_criteria,
+         hrc_mmc_thr)
 
 
 # extract section threshold
-section_threshold <- filtered_metadata_sis %>% 
-  select(flat_CDM_supertype_name,
-         flat_CDM_thr) %>% 
+section_threshold <- filtered_metadata %>% 
+  select(hrc_mmc_supertype_name,
+         hrc_mmc_thr) %>% 
   unique() %>% 
-  arrange(flat_CDM_supertype_name)
+  arrange(hrc_mmc_supertype_name)
 
 
 # plot distribution of correlation coefficients for selected 
-plot <- ggplot(filtered_metadata_sis,
-               aes(x = flat_CDM_supertype_name,
-                   y = flat_CDM_cluster_avg_correlation,
-                   fill = flat_CDM_supertype_name)) +
+plot <- ggplot(filtered_metadata,
+               aes(x = hrc_mmc_supertype_name,
+                   y = hrc_mmc_cluster_avg_correlation,
+                   fill = hrc_mmc_supertype_name)) +
   geom_violin() +
   geom_boxplot(width = .2,
                alpha = .6,
@@ -141,10 +125,10 @@ ggsave(filename = "/results/mapping_filter_old.pdf",
 
 
 
-plot <- ggplot(filtered_metadata_sis,
-               aes(x = flat_CDM_supertype_name,
-                   y = flat_CDM_cluster_avg_correlation,
-                   fill = flat_CDM_supertype_name)) +
+plot <- ggplot(filtered_metadata,
+               aes(x = hrc_mmc_supertype_name,
+                   y = hrc_mmc_cluster_avg_correlation,
+                   fill = hrc_mmc_supertype_name)) +
   geom_violin() +
   geom_boxplot(width = .2,
                alpha = .6,
@@ -160,70 +144,70 @@ plot <- ggplot(filtered_metadata_sis,
   labs(x = "Supertype Name",
        y = "# of detected spots per cell") +
   guides(color = "none") +
-  geom_segment(aes(x = 0.75, 
+  geom_segment(aes(x = 0.75,
                    xend = 1.25,
-                   y = section_threshold[1,2],
-                   yend = section_threshold[1,2],
+                   y = section_threshold$hrc_mmc_thr[1],
+                   yend = section_threshold$hrc_mmc_thr[1],
                    color = "red")) +
-  geom_segment(aes(x = 1.75, 
+  geom_segment(aes(x = 1.75,
                    xend = 2.25,
-                   y = section_threshold[2,2],
-                   yend = section_threshold[2,2],
+                   y = section_threshold$hrc_mmc_thr[2],
+                   yend = section_threshold$hrc_mmc_thr[2],
                    color = "red")) +
-  geom_segment(aes(x = 2.75, 
+  geom_segment(aes(x = 2.75,
                    xend = 3.25,
-                   y = section_threshold[3,2],
-                   yend = section_threshold[3,2],
+                   y = section_threshold$hrc_mmc_thr[3],
+                   yend = section_threshold$hrc_mmc_thr[3],
                    color = "red")) +
-  geom_segment(aes(x = 3.75, 
+  geom_segment(aes(x = 3.75,
                    xend = 4.25,
-                   y = section_threshold[4,2],
-                   yend = section_threshold[4,2],
+                   y = section_threshold$hrc_mmc_thr[4],
+                   yend = section_threshold$hrc_mmc_thr[4],
                    color = "red")) +
-  geom_segment(aes(x = 4.75, 
+  geom_segment(aes(x = 4.75,
                    xend = 5.25,
-                   y = section_threshold[5,2],
-                   yend = section_threshold[5,2],
+                   y = section_threshold$hrc_mmc_thr[5],
+                   yend = section_threshold$hrc_mmc_thr[5],
                    color = "red")) +
-  geom_segment(aes(x = 5.75, 
+  geom_segment(aes(x = 5.75,
                    xend = 6.25,
-                   y = section_threshold[6,2],
-                   yend = section_threshold[6,2],
+                   y = section_threshold$hrc_mmc_thr[6],
+                   yend = section_threshold$hrc_mmc_thr[6],
                    color = "red")) +
-  geom_segment(aes(x = 6.75, 
+  geom_segment(aes(x = 6.75,
                    xend = 7.25,
-                   y = section_threshold[7,2],
-                   yend = section_threshold[7,2],
+                   y = section_threshold$hrc_mmc_thr[7],
+                   yend = section_threshold$hrc_mmc_thr[7],
                    color = "red")) +
-  geom_segment(aes(x = 7.75, 
+  geom_segment(aes(x = 7.75,
                    xend = 8.5,
-                   y = section_threshold[8,2],
-                   yend = section_threshold[8,2],
+                   y = section_threshold$hrc_mmc_thr[8],
+                   yend = section_threshold$hrc_mmc_thr[8],
                    color = "red")) +
-  geom_segment(aes(x =8.75, 
+  geom_segment(aes(x =8.75,
                    xend = 9.25,
-                   y = section_threshold[9,2],
-                   yend = section_threshold[9,2],
+                   y = section_threshold$hrc_mmc_thr[9],
+                   yend = section_threshold$hrc_mmc_thr[9],
                    color = "red")) +
-  geom_segment(aes(x =9.75, 
+  geom_segment(aes(x =9.75,
                    xend = 10.25,
-                   y = section_threshold[10,2],
-                   yend = section_threshold[10,2],
+                   y = section_threshold$hrc_mmc_thr[10],
+                   yend = section_threshold$hrc_mmc_thr[10],
                    color = "red")) +
-  geom_segment(aes(x =10.75, 
+  geom_segment(aes(x =10.75,
                    xend = 11.25,
-                   y = section_threshold[11,2],
-                   yend = section_threshold[11,2],
+                   y = section_threshold$hrc_mmc_thr[11],
+                   yend = section_threshold$hrc_mmc_thr[11],
                    color = "red")) +
-  geom_segment(aes(x =11.75, 
+  geom_segment(aes(x =11.75,
                    xend = 12.25,
-                   y = section_threshold[12,2],
-                   yend = section_threshold[12,2],
+                   y = section_threshold$hrc_mmc_thr[12],
+                   yend = section_threshold$hrc_mmc_thr[12],
                    color = "red")) +
-  geom_segment(aes(x =12.75, 
+  geom_segment(aes(x =12.75,
                    xend = 13.25,
-                   y = section_threshold[13,2],
-                   yend = section_threshold[13,2],
+                   y = section_threshold$hrc_mmc_thr[13],
+                   yend = section_threshold$hrc_mmc_thr[13],
                    color = "red")) +
   theme_minimal() + 
   theme(axis.text.x = element_text(angle = 45, 
@@ -251,7 +235,7 @@ classifier_palette <- c("lightgrey","black","red")
 
 threshold <- 0.5
 
-example_sections_plot <- metadata_sis %>%
+example_sections_plot <- metadata %>%
   filter(basic_qc_filter == F) %>% 
   filter(doublets_filter == F) %>%
   filter(section %in% example_sections) %>% 
@@ -362,15 +346,15 @@ classifier_palette <- c("lightgrey","black","red")
 threshold <- 0.5
 
 example_sections_plot <- metadata_sis %>%
-  filter(basic_qc_filter == F) %>% 
-  filter(doublets_filter == F) %>%
+  filter(basic_qc_passed == T) %>% 
+  filter(doublets_qc_passed == T) %>%
   filter(section %in% example_sections) %>% 
-  select(x_coordinate,
-         y_coordinate,
+  select(volume_x,
+         volume_y,
          section,
-         flat_CDM_supertype_name,
-         flat_CDM_cluster_avg_correlation,
-         flat_CDM_cluster_thr)
+         hrc_mmc_supertype_name,
+         hrc_mmc_cluster_avg_correlation,
+         hrc_mmc_cluster_thr)
 
 # Create the classifier column
 example_sections_plot <- example_sections_plot %>%

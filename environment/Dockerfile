@@ -1,4 +1,4 @@
-# hash:sha256:8fed62c3363aa7e39b1084a5a67b3b721c11886a04b27b2cfc47d4ee35e849aa
+# hash:sha256:c40cb184386f02767caa77d65fc36bdae05f7ed24019458935ce293853994e36
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/py-r:python3.10.12-R4.2.3-IRkernel-ubuntu22.04
 
@@ -13,6 +13,7 @@ COPY git-askpass /
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        gfortran=4:11.2.0-1ubuntu1 \
         libcurl4-openssl-dev=7.81.0-1ubuntu1.13 \
         libx11-dev=2:1.7.5-1ubuntu0.3 \
     && rm -rf /var/lib/apt/lists/*
@@ -45,7 +46,7 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("concaveman")' \
     && Rscript -e 'remotes::install_version("cowplot", "1.1.3")' \
     && Rscript -e 'remotes::install_version("dabestr", "2023.9.12")' \
-    && Rscript -e 'remotes::install_version("data.table", "1.16.4")' \
+    && Rscript -e 'remotes::install_version("data.table", "1.17.0")' \
     && Rscript -e 'remotes::install_version("doBy", "4.6.25")' \
     && Rscript -e 'remotes::install_version("doParallel", "1.0.17")' \
     && Rscript -e 'remotes::install_version("dplyr", "1.1.4")' \
@@ -65,7 +66,7 @@ RUN Rscript -e 'remotes::install_version("BiocManager", "1.30.25")' \
     && Rscript -e 'remotes::install_version("klaR", "1.7-3")' \
     && Rscript -e 'remotes::install_version("lme4")' \
     && Rscript -e 'remotes::install_version("lsa", "0.73.3")' \
-    && Rscript -e 'remotes::install_version("mclust", "6.1.1")' \
+    && Rscript -e 'remotes::install_version("mclust", "5.4.9")' \
     && Rscript -e 'remotes::install_version("minqa", "1.2.8")' \
     && Rscript -e 'remotes::install_version("nloptr")' \
     && Rscript -e 'remotes::install_version("paletteer", "1.6.0")' \
@@ -96,21 +97,6 @@ RUN Rscript -e 'options(warn=2); install.packages("BiocManager")'
 RUN Rscript -e 'options(warn=2); BiocManager::install(c( \
         "BiocVersion" \
     ))' # Original versions: 3.16.0
-
-ADD "https://github.com/coder/code-server/releases/download/v4.95.3/code-server-4.95.3-linux-amd64.tar.gz" /.code-server/code-server.tar.gz
-	
-RUN cd /.code-server \
-    && tar -xvf code-server.tar.gz \
-    && rm code-server.tar.gz \
-    && ln -s /.code-server/code-server-4.95.3-linux-amd64/bin/code-server  /usr/bin/code-server
-
-RUN mkdir -p /.vscode/extensions \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension REditorSupport.R \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension continue.continue \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension ms-python.python \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension ms-toolsai.jupyter \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension reageyao.bioSyntax \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension saoudrizwan.claude-dev
 
 COPY postInstall /
 RUN /postInstall
