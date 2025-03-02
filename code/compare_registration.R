@@ -43,6 +43,12 @@ cl.anat.df <- cl.anat.df %>%
          broad_region,
          registration_landmark)
 
+# load ccf annotation
+ccf_anno <- read_sheet("https://docs.google.com/spreadsheets/d/1QOhsYhlsk2KE2pZuSnEwUhEIG4mh782PcAgHrtJyRYI/edit?gid=0#gid=0",sheet = "CCFv3")
+ccf_anno <- ccf_anno %>% 
+  select(acronym,
+         CCF_registration)
+
 sections_to_keep <- c("1199650929", 
                       "1199650932", 
                       "1199650935", 
@@ -149,6 +155,12 @@ metadata <- merge(metadata,
                   all.x = T,
                   all.y = F)
 
+metadata <- merge(metadata,
+                  ccf_anno,
+                  by.x = "structure_acronym",
+                  by.y = "acronym",
+                  all.x = T,
+                  all.y = F)
 
 metadata_subset <- metadata %>% 
   filter(final_qc_passed == T) %>%
@@ -164,8 +176,8 @@ metadata_subset <- metadata %>%
          structure_id,
          broad_region,
          registration_landmark,
+         CCF_registration,
          CCF_level1,
-         CCF_level2,
          volume_x,
          volume_y,
          volume_z)
@@ -269,10 +281,10 @@ ggsave(filename = "/results/jaccard_ccf_level1.pdf",
 
 # subset data to relevant features
 jaccard_df <- metadata_subset %>%
-  filter(!is.na(CCF_level2)) %>% 
+  filter(!is.na(CCF_registration)) %>% 
   filter(!is.na(registration_landmark)) %>%
   select(production_cell_id,
-         CCF_level2,
+         CCF_registration,
          registration_landmark)
 
 # convert cell label to rownames
@@ -280,14 +292,14 @@ jaccard_df <- jaccard_df %>%
   tibble::column_to_rownames("production_cell_id")
 
 # calculate the ari
-ari <- adjustedRandIndex(jaccard_df$registration_landmark, jaccard_df$CCF_level2)
+ari <- adjustedRandIndex(jaccard_df$registration_landmark, jaccard_df$CCF_registration)
 
 # convert spatial domain level 1 and parcellation division to factors
 cl <- jaccard_df$registration_landmark
 names(cl) <- rownames(jaccard_df)
 cl <- as.factor(cl)
 
-ref.cl <- jaccard_df$CCF_level2
+ref.cl <- jaccard_df$CCF_registration
 names(ref.cl) <- rownames(jaccard_df)
 ref.cl <- as.factor(ref.cl)
 
@@ -354,8 +366,8 @@ plot <- ggplot(tb.df,
 
 ggsave(filename = "/results/jaccard_ccf_level2.pdf", 
        plot = plot, 
-       width = 7,
-       height = 5, 
+       width = 9,
+       height = 7, 
        dpi = 160)
 
 
@@ -394,12 +406,19 @@ registration_old <- registration_old %>%
 
 # add region information for cell types
 registration_old <- merge(registration_old,
-                  cl.anat.df,
-                  by.x = "hrc_mmc_cluster_name",
-                  by.y = "cluster_id_label",
-                  all.x = T,
-                  all.y = F)
+                          cl.anat.df,
+                          by.x = "hrc_mmc_cluster_name",
+                          by.y = "cluster_id_label",
+                          all.x = T,
+                          all.y = F)
 
+
+registration_old <- merge(registration_old,
+                          ccf_anno,
+                          by.x = "structure_acronym",
+                          by.y = "acronym",
+                          all.x = T,
+                          all.y = F)
 
 registration_old_subset <- registration_old %>% 
   filter(final_qc_passed == T) %>%
@@ -415,7 +434,7 @@ registration_old_subset <- registration_old %>%
          broad_region,
          registration_landmark,
          CCF_level1,
-         CCF_level2,
+         CCF_registration,
          ccf_x,
          ccf_y,
          ccf_z)
@@ -512,16 +531,14 @@ ggsave(filename = "/results/jaccard_ccf_level1_old.pdf",
        height = 5, 
        dpi = 160)
 
-
-
 ############## plot Jaccard overlay with fine landmark clusters ############
 
 # subset data to relevant features
 jaccard_df <- registration_old_subset %>%
-  filter(!is.na(CCF_level2)) %>% 
+  filter(!is.na(CCF_registration)) %>% 
   filter(!is.na(registration_landmark)) %>%
   select(cell_id,
-         CCF_level2,
+         CCF_registration,
          registration_landmark)
 
 # convert cell label to rownames
@@ -529,14 +546,14 @@ jaccard_df <- jaccard_df %>%
   tibble::column_to_rownames("cell_id")
 
 # calculate the ari
-ari <- adjustedRandIndex(jaccard_df$registration_landmark, jaccard_df$CCF_level2)
+ari <- adjustedRandIndex(jaccard_df$registration_landmark, jaccard_df$CCF_registration)
 
 # convert spatial domain level 1 and parcellation division to factors
 cl <- jaccard_df$registration_landmark
 names(cl) <- rownames(jaccard_df)
 cl <- as.factor(cl)
 
-ref.cl <- jaccard_df$CCF_level2
+ref.cl <- jaccard_df$CCF_registration
 names(ref.cl) <- rownames(jaccard_df)
 ref.cl <- as.factor(ref.cl)
 
@@ -603,7 +620,7 @@ plot <- ggplot(tb.df,
 
 ggsave(filename = "/results/jaccard_ccf_level2_old.pdf", 
        plot = plot, 
-       width = 7,
-       height = 5, 
+       width = 9,
+       height = 7, 
        dpi = 160)
 
