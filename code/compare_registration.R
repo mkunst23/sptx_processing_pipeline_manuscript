@@ -136,7 +136,7 @@ landmark_color_palette <- setNames(landmark_color$registration_landmark_color, l
 
 # order by graph order
 landmark_color <- landmark_color %>% 
-  arrange(graph_order) 
+  arrange(desc(graph_order)) 
 
 ###################################### analyze new registration ###################################
 
@@ -188,6 +188,8 @@ metadata_subset <- metadata %>%
 jaccard_df <- metadata_subset %>%
   filter(!is.na(CCF_level1)) %>% 
   filter(!is.na(broad_region)) %>%
+  filter(CCF_level1 != "fiber tracts") %>% 
+  filter(broad_region != "fiber tracts") %>% 
   select(production_cell_id,
          CCF_level1,
          broad_region)
@@ -269,7 +271,7 @@ plot <- ggplot(tb.df,
            color = "black")
   
 
-ggsave(filename = "/results/jaccard_ccf_level1.pdf", 
+ggsave(filename = "/results/jaccard_CCFbroad_CCFlevel1.pdf", 
        plot = plot, 
        width = 7,
        height = 5, 
@@ -282,7 +284,7 @@ ggsave(filename = "/results/jaccard_ccf_level1.pdf",
 # subset data to relevant features
 jaccard_df <- metadata_subset %>%
   filter(!is.na(CCF_registration)) %>% 
-  filter(!is.na(registration_landmark)) %>%
+  filter(!is.na(registration_landmark)) %>% 
   select(production_cell_id,
          CCF_registration,
          registration_landmark)
@@ -323,7 +325,7 @@ tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.
 
 # reorder ref.cl and cl
 tb.df$cl <- factor(tb.df$cl,
-                   levels = ccf_color$acronym) 
+                   levels = landmark_color$registration_landmark) 
 
 tb.df$ref.cl <- factor(tb.df$ref.cl,
                        levels = landmark_color$registration_landmark) 
@@ -364,7 +366,7 @@ plot <- ggplot(tb.df,
            size = 5, 
            color = "black")
 
-ggsave(filename = "/results/jaccard_ccf_level2.pdf", 
+ggsave(filename = "/results/jaccard_ccflandmarks.pdf", 
        plot = plot, 
        width = 9,
        height = 7, 
@@ -445,6 +447,8 @@ registration_old_subset <- registration_old %>%
 jaccard_df <- registration_old_subset %>%
   filter(!is.na(CCF_level1)) %>% 
   filter(!is.na(broad_region)) %>%
+  filter(CCF_level1 != "fiber tracts") %>% 
+  filter(broad_region != "fiber tracts") %>% 
   select(cell_id,
          CCF_level1,
          broad_region)
@@ -577,7 +581,7 @@ tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.
 
 # reorder ref.cl and cl
 tb.df$cl <- factor(tb.df$cl,
-                   levels = ccf_color$acronym) 
+                   levels = landmark_color$registration_landmark) 
 
 tb.df$ref.cl <- factor(tb.df$ref.cl,
                        levels = landmark_color$registration_landmark) 

@@ -33,6 +33,18 @@ options(mc.cores=30)
 
 gs4_deauth()
 
+
+folder_path <- "/results/687997"
+
+# Check if the folder exists
+if (!dir.exists(folder_path)) {
+  # Create the folder if it does not exist
+  dir.create(folder_path, recursive = TRUE)
+  cat("Folder created:", folder_path, "\n")
+} else {
+  cat("Folder already exists:", folder_path, "\n")
+}
+
 ############# setup helper functions ##################
 
 # function to calculate gini coefficient for each row of a data frame
@@ -56,8 +68,10 @@ grey_matter <- c("CB",
                  "PAL",
                  "RHP",
                  "sAMY",
-                 "STR",
+                 "STRv",
+                 "STRd",
                  "TH")
+
 white_matter <- c("fiber tracts",
                   "VS")
 
@@ -314,6 +328,11 @@ bad_cells <- metadata_subset %>%
 
 metadata_subset <- metadata_subset %>% 
   filter(!production_cell_id %in% bad_cells)
+
+# save cleaned data
+fwrite(metadata_subset,
+       "/scratch/687997_metadata_cleaned.csv",
+       row.names = F)
 
 ############ create helper data frames for plotting ####################
 region.mapping <- metadata_subset %>% 

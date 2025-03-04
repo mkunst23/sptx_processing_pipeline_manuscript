@@ -23,7 +23,6 @@ suppressPackageStartupMessages({
   library(philentropy)
   library(igraph)
   library(paletteer)
-  library(randomcoloR)
   library(stringr)
 })
 
@@ -242,7 +241,7 @@ metadata_subset <- metadata %>%
   filter(spatial_domain_level_1 != "LQ") %>% 
   filter(spatial_domain_level_1 != "Borders")
 
-# grab colors for the different levels of cell types. Thsoe will be used later for plotting
+# grab colors for the different levels of cell types. Those will be used later for plotting
 ss <- "https://docs.google.com/spreadsheets/d/1a4URa_t3oc824vjIA8LcyYmJrv0-2Rm7Q5eJq42re2c/edit?usp=sharing"
 class_colors <- read_sheet(ss,sheet="classes")
 subclass_colors <- read_sheet(ss, sheet="subclasses")
@@ -552,12 +551,97 @@ plot <- ggplot(tb.df,
                        high = "darkblue") + 
   scale_size(range = c(0, 5)) 
 
-ggsave(filename = "/results/jaccard.pdf", 
+ggsave(filename = "/results/jaccard_SD1_CCF_broad.pdf", 
        plot = plot, 
        width = 7,
        height = 5, 
        dpi = 160)
 
+
+###################### SD1 vs CCF broad #############################
+
+# subset data to relevant features
+jaccard_df <- metadata %>%
+  filter(final_qc_passed == T) %>%
+  filter(!is.na(spatial_domain_level_2)) %>% 
+  filter(!str_detect(spatial_domain_level_2, "LQ")) %>%
+  filter(!str_detect(spatial_domain_level_2, "Borders")) %>%
+  filter(!is.na(broad_region)) %>%
+  select(production_cell_id,
+         spatial_domain_level_2,
+         broad_region,
+         registration_landmark)
+
+# convert cell label to rownames
+jaccard_df <- jaccard_df %>% 
+  tibble::column_to_rownames("production_cell_id")
+
+# convert spatial domain level 1 and parcellation division to factors
+cl <- jaccard_df$broad_region
+names(cl) <- rownames(jaccard_df)
+cl <- as.factor(cl)
+
+ref.cl <- jaccard_df$spatial_domain_level_2
+names(ref.cl) <- rownames(jaccard_df)
+ref.cl <- as.factor(ref.cl)
+
+# create a table of the number of cells in each cluster
+tb <- table(cl, ref.cl)
+
+# set minimum threshold for number of cells in a cluster
+min.th = 1
+
+# remove rows with less than min.th cells
+tb.df <- as.data.frame(tb)
+tb.df <- tb.df[tb.df$Freq >= min.th,]
+
+# create a table of the number of cells in each cluster
+cl.size <- table(cl)
+ref.cl.size <- table(ref.cl)
+
+# Compute Jaccard statistics for each pair of clusters
+tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.cl.size[as.character(tb.df[,2])] - tb.df$Freq))
+
+
+# reorder ref.cl and cl
+tb.df$cl <- factor(tb.df$cl,
+                   levels = broad_landmarks_color$broad_region) 
+
+tb.df$ref.cl <- factor(tb.df$ref.cl,
+                       levels = spatial_domain_color$spatial_domain_level_2) 
+
+tb.df <- tb.df %>% 
+  drop_na()
+
+# make a dot plot where the size of the dot is proportional to tb.df$Freq and the color is proportional to tb.df$jaccard
+plot <- ggplot(tb.df, 
+               aes(x = fct_rev(cl), 
+                   y = ref.cl)) + 
+  geom_point(aes(size = sqrt(Freq),
+                 color = jaccard)) + 
+  theme(panel.background = element_blank(),
+        axis.text.x = element_text(angle = 45, 
+                                   hjust = 1, 
+                                   size = 8),
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(hjust = 1, 
+                                 size = 8),  #remove y axis labels
+        axis.ticks.y=element_blank(), #remove y axis ticks
+        panel.grid.major = element_line(color = "grey80"), # Major grid lines
+        panel.grid.minor = element_line(color = "grey90"),  # Minor grid lines
+        panel.border = element_rect(colour = "black", fill = NA)) +
+  labs(x = "Spatial domaind level 1", y = "Region specific clusters") +
+  scale_color_gradient(low = "yellow", 
+                       high = "darkblue") + 
+  scale_size(range = c(0, 5)) 
+
+ggsave(filename = "/results/jaccard_SD2_CCF_broad.pdf", 
+       plot = plot, 
+       width = 7,
+       height = 5, 
+       dpi = 160)
 
 ############################ plot landmarks ########################
 
@@ -639,7 +723,7 @@ plot <- ggplot(tb.df,
                        high = "darkblue") + 
   scale_size(range = c(0, 5)) 
 
-ggsave(filename = "/results/jaccard_sd2.pdf", 
+ggsave(filename = "/results/jaccard_SD2_CCF_landmarks.pdf", 
        plot = plot, 
        width = 7,
        height = 5, 
@@ -725,7 +809,7 @@ plot <- ggplot(tb.df,
                        high = "darkblue") + 
   scale_size(range = c(0, 5)) 
 
-ggsave(filename = "/results/jaccard_ccf_level1.pdf", 
+ggsave(filename = "/results/jaccard_SD1_CCFlevel1.pdf", 
        plot = plot, 
        width = 7,
        height = 5, 
@@ -774,7 +858,6 @@ ref.cl.size <- table(ref.cl)
 # Compute Jaccard statistics for each pair of clusters
 tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.cl.size[as.character(tb.df[,2])] - tb.df$Freq))
 
-
 # reorder ref.cl and cl
 tb.df$cl <- factor(tb.df$cl,
                    levels = ccf_color$acronym) 
@@ -810,7 +893,7 @@ plot <- ggplot(tb.df,
                        high = "darkblue") + 
   scale_size(range = c(0, 5)) 
 
-ggsave(filename = "/results/jaccard_ccf_level2.pdf", 
+ggsave(filename = "/results/jaccard_SD2_CCFlevel2.pdf", 
        plot = plot, 
        width = 26,
        height = 10, 
