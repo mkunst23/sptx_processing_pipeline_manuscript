@@ -358,7 +358,7 @@ ggsave(filename = "/results/ccf_broad_example_sections.png",
        height = 6, 
        dpi = 160)
 
-##################### create heatmap for subclass dominace #####################
+##################### create heatmap for subclass dominace at SD2 #####################
 
 dominance_scores <- metadata_subset %>%
   dplyr::count(spatial_domain_level_2, hrc_mmc_subclass_name) %>%
@@ -470,6 +470,101 @@ ggsave(filename = "/results/sd_heatmap.pdf",
        height = 6, 
        dpi = 160)
 
+
+#################### plot dominance score for ccf_broad ####################
+
+dominance_scores <- metadata_subset %>%
+  dplyr::count(ccf_broad, hrc_mmc_subclass_name) %>%
+  group_by(ccf_broad) %>%
+  mutate(Dominance = n/max(n))
+
+dominance_scores$ccf_broad <- factor(dominance_scores$ccf_broad, 
+                                                  levels = broad_ccf_color$ccf_broad)
+
+
+subclass_dominance <- ggplot(dominance_scores, aes(x = hrc_mmc_subclass_name, 
+                                                   y = ccf_broad, 
+                                                   fill = Dominance)) +
+  geom_tile() +
+  scale_fill_gradientn(colors = proportion_colors) +
+  theme(panel.background = element_blank(),
+        #axis.text.x = element_text(angle = 45, hjust = 1, size = 4),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),  #remove y axis labels
+        axis.ticks.y=element_blank(), #remove y axis ticks
+        panel.border = element_rect(colour = "black", fill = NA)
+  )
+
+# plot subclass tiles
+cols <- setNames(subclass_colors$subclass_color, 
+                 subclass_colors$subclass_id_label)
+
+l2plot <- ggplot(data=add.meta) + 
+  geom_tile(aes(x=hrc_mmc_subclass_name, 
+                y=1, 
+                fill=hrc_mmc_subclass_name)) +
+  scale_fill_manual(values=cols, 
+                    name = "Subclass", 
+                    limits = force) +
+  theme_void() +
+  ylab( "Subclass") +
+  theme(axis.title.y = element_text(size=8, 
+                                    hjust=1, 
+                                    vjust=0.5),
+        legend.position = "none")
+
+# plot class tiles
+cols <- setNames(class_colors$class_color, 
+                 class_colors$class_id_label)
+
+clplot <- ggplot(data=add.meta) + 
+  geom_tile(aes(x=hrc_mmc_subclass_name, 
+                y=1, 
+                fill=hrc_mmc_class_name)) +
+  scale_fill_manual(values=cols, 
+                    name = "Class", 
+                    limits = force) +
+  theme_void() +
+  ylab( "Class") +
+  theme(axis.title.y = element_text(size=8, 
+                                    hjust=1, 
+                                    vjust=0.5),
+        #axis.text.x = element_text(angle = 45, 
+        #                           hjust = 1),
+        legend.position = "right")
+
+
+ccfplot <- ggplot(data=broad_ccf_color) + 
+  geom_tile(aes(y=ccf_broad, 
+                x=1, 
+                fill=ccf_broad)) +
+  scale_fill_manual(values=broad_ccf_color_palette, 
+                    name = "CCF", 
+                    limits = force) +
+  #theme_void() +
+  theme(panel.background = element_blank(),
+        axis.text.x=element_blank(), #remove x axis labels
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        #axis.text.y=element_blank(),
+        axis.title.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        legend.position = "none")
+
+final_subclass_dominance <- subclass_dominance %>%
+  insert_bottom(l2plot, height = 0.03) %>%
+  insert_bottom(clplot, height = 0.03)  %>% 
+  insert_left(ccfplot, width=0.01)
+
+ggsave(filename = "/results/ccf_broad_heatmap.pdf", 
+       plot = final_subclass_dominance, 
+       width = 14,
+       height = 6, 
+       dpi = 160)
+
 ############## plot Jaccard overlay with broad landmark clusters ############
 
 # subset data to relevant features
@@ -557,6 +652,92 @@ ggsave(filename = "/results/jaccard_SD1_CCF_broad.pdf",
        height = 5, 
        dpi = 160)
 
+
+
+############ jaccard overlap for ccf_broad and broad region ##################
+
+# subset data to relevant features
+jaccard_df <- metadata %>%
+  filter(final_qc_passed == T) %>%
+  filter(!is.na(ccf_broad)) %>% 
+  filter(ccf_broad != "LQ") %>%
+  filter(ccf_broad != "Borders") %>%
+  filter(!is.na(broad_region)) %>%
+  select(production_cell_id,
+         ccf_broad,
+         broad_region)
+
+# convert cell label to rownames
+jaccard_df <- jaccard_df %>% 
+  tibble::column_to_rownames("production_cell_id")
+
+# convert spatial domain level 1 and parcellation division to factors
+cl <- jaccard_df$broad_region
+names(cl) <- rownames(jaccard_df)
+cl <- as.factor(cl)
+
+ref.cl <- jaccard_df$ccf_broad
+names(ref.cl) <- rownames(jaccard_df)
+ref.cl <- as.factor(ref.cl)
+
+# create a table of the number of cells in each cluster
+tb <- table(cl, ref.cl)
+
+# set minimum threshold for number of cells in a cluster
+min.th = 1
+
+# remove rows with less than min.th cells
+tb.df <- as.data.frame(tb)
+tb.df <- tb.df[tb.df$Freq >= min.th,]
+
+# create a table of the number of cells in each cluster
+cl.size <- table(cl)
+ref.cl.size <- table(ref.cl)
+
+# Compute Jaccard statistics for each pair of clusters
+tb.df$jaccard <- as.vector(tb.df$Freq / (cl.size[as.character(tb.df[,1])] + ref.cl.size[as.character(tb.df[,2])] - tb.df$Freq))
+
+
+# reorder ref.cl and cl
+tb.df$cl <- factor(tb.df$cl,
+                   levels = broad_landmarks_color$broad_region) 
+
+tb.df$ref.cl <- factor(tb.df$ref.cl,
+                       levels = broad_ccf_color$ccf_broad) 
+
+tb.df <- tb.df %>% 
+  drop_na()
+
+
+# make a dot plot where the size of the dot is proportional to tb.df$Freq and the color is proportional to tb.df$jaccard
+plot <- ggplot(tb.df, 
+               aes(x = fct_rev(cl), 
+                   y = ref.cl)) + 
+  geom_point(aes(size = sqrt(Freq),
+                 color = jaccard)) + 
+  theme(panel.background = element_blank(),
+        axis.text.x = element_text(angle = 45, 
+                                   hjust = 1, 
+                                   size = 8),
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_text(hjust = 1, 
+                                 size = 8),  #remove y axis labels
+        axis.ticks.y=element_blank(), #remove y axis ticks
+        panel.grid.major = element_line(color = "grey80"), # Major grid lines
+        panel.grid.minor = element_line(color = "grey90"),  # Minor grid lines
+        panel.border = element_rect(colour = "black", fill = NA)) +
+  labs(x = "Spatial domaind level 1", y = "Region specific clusters") +
+  scale_color_gradient(low = "yellow", 
+                       high = "darkblue") + 
+  scale_size(range = c(0, 5)) 
+
+ggsave(filename = "/results/jaccard_broad_CCF_CCF_broad.pdf", 
+       plot = plot, 
+       width = 7,
+       height = 5, 
+       dpi = 160)
 
 ###################### SD1 vs CCF broad #############################
 

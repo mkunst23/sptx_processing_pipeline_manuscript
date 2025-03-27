@@ -22,7 +22,6 @@ suppressPackageStartupMessages({
   library(igraph)
   library(paletteer)
   library(anndata)
-  library(randomcoloR)
   library(cowplot)
 })
 
@@ -73,7 +72,7 @@ section_cluster_palette <- setNames(section_cluster_colors$color,section_cluster
 ################## read in anndata file and filter/enhance metadata ##########
 
 # load anndata file of downsampled data
-gridded_ad <- read_h5ad("/data/merfish_638850_mouseadult_spatial_domain_30/mouse_638850_spacel.h5ad")
+gridded_ad <- read_h5ad("/data/merscope_638850_mouseadult_clustered_sections_QC_filt/whole_dataset/mouse_638850_res_1.4_clustered.h5ad")
 
 # extract umap metadata
 umap <- as.data.frame(gridded_ad$obsm["X_umap"])
@@ -89,13 +88,14 @@ gridded_metadata <- merge(gridded_metadata,
 
 gridded_metadata <- merge(gridded_metadata,
                       sd.df,
-                      by.x = "leiden_res_1.2_knn_8",
+                      by.x = "leiden_res_1.4_knn_8",
                       by.y = "Cluster_id",
                       all.x = T,
                       all.y = F)
 
 gridded_metadata <- gridded_metadata %>% 
-  filter(spatial_domain_level_1 != "LQ")
+  filter(spatial_domain_level_1 != "LQ") %>% 
+  filter(spatial_domain_level_1 != "Borders")
 
 
 ################# plot umap with no color code ####################
@@ -151,7 +151,7 @@ legend <- get_legend(plot)
 legend_plot <- plot_grid(legend)
 
 # Save the legend to a PDF
-ggsave("/results/legend_sd2.pdf", 
+ggsave("/results/umap_legend_sd2.pdf", 
        legend_plot, 
        width = 6, 
        height = 5)
