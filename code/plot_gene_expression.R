@@ -72,23 +72,25 @@ ColorPalClass <- ColorPalClass %>%
 #metadata_vpt <- vpt$obs
 load("/scratch/metadata_vpt.rda")
 
+# rename cell label column to sample name
+metadata_vpt <- metadata_vpt %>% 
+  rename(sample_name = cell_label)
+
 filtered_metadata_vpt <- metadata_vpt %>%
   filter(final_filter == FALSE) %>%
-  select(flat_CDM_cluster_alias) 
+  select(CDM_cluster_alias, sample_name) 
 
-# Convert row names into a column
-filtered_metadata_vpt <- rownames_to_column(filtered_metadata_vpt, var = "sample_name")
 
 filtered_metadata_vpt <- merge(filtered_metadata_vpt,
                                anno,
-                               by.x = "flat_CDM_cluster_alias",
+                               by.x = "CDM_cluster_alias",
                                by.y = "cl",
                                all.x = T,
                                all.y = F)
 
 filtered_metadata_vpt <- merge(filtered_metadata_vpt,
                                ColorPalCluster,
-                               by.x = "flat_CDM_cluster_alias",
+                               by.x = "CDM_cluster_alias",
                                by.y = "cl",
                                all.x = T,
                                all.y = F)
@@ -132,7 +134,6 @@ cells_to_keep <- filtered_metadata_vpt$sample_name
 subset_data_vpt <- data_vpt %>% 
   filter(sample_name %in% cells_to_keep)
 
-
 # add vpt to end of each class name
 filtered_metadata_vpt <- filtered_metadata_vpt %>%
   mutate(class_label = paste0(class_label, " vpt"))
@@ -163,23 +164,23 @@ gc()
 #metadata_sis <- sis$obs
 load("/scratch/metadata_sis.rda")
 
+metadata_sis <- metadata_sis %>% 
+  rename(sample_name = production_cell_id)
+
 filtered_metadata_sis <- metadata_sis %>%
   filter(final_filter == FALSE) %>%
-  select(flat_CDM_cluster_alias) 
-
-# Convert row names into a column
-filtered_metadata_sis <- rownames_to_column(filtered_metadata_sis, var = "sample_name")
+  select(sample_name,CDM_cluster_alias) 
 
 filtered_metadata_sis <- merge(filtered_metadata_sis,
                                anno,
-                               by.x = "flat_CDM_cluster_alias",
+                               by.x = "CDM_cluster_alias",
                                by.y = "cl",
                                all.x = T,
                                all.y = F)
 
 filtered_metadata_sis <- merge(filtered_metadata_sis,
                                ColorPalCluster,
-                               by.x = "flat_CDM_cluster_alias",
+                               by.x = "CDM_cluster_alias",
                                by.y = "cl",
                                all.x = T,
                                all.y = F)
@@ -359,7 +360,42 @@ ggsave(filename = "/results/gene_expression_comparison.pdf",
        width = 20,
        height = 10, 
        dpi = 300)
+
+
+########## subset to only 1 gene and two classes
   
+# list of classes 
+class_list <- c("IT-ET Glut sis",
+                "IT-ET Glut vpt",
+                "CTX-CGE GABA sis",
+                "CTX-CGE GABA vpt",
+                "CTX-MGE GABA sis",
+                "CTX-MGE GABA vpt")
+
+metadata_combined_subset <- metadata_combined %>% 
+  filter(class_label %in% class_list)
+
+cells_to_keep2 <- metadata_combined_subset %>% 
+  pull(sample_name)
+
+data_combined_subset <- data_combined %>% 
+  filter(sample_name %in% cells_to_keep2)
+
+plot <- group_dot_plot(data_combined_subset, 
+                       metadata_combined_subset, 
+                       genes = c("Slc17a7","Nrn1"), 
+                       grouping = "class", 
+                       log_scale = TRUE,
+                       font_size = 14,
+                       max_size = 30,
+                       rotate_counts = T)
+
+ggsave(filename = "/results/gene_expression_comparison_subset.pdf", 
+       plot = plot, 
+       width = 20,
+       height = 10, 
+       dpi = 300)
+
 ########## legacy code for split violin plot ##############  
   
 # Convert from wide to long format using column indices

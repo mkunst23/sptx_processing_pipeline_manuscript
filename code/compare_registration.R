@@ -141,10 +141,14 @@ landmark_color <- landmark_color %>%
 ###################################### analyze new registration ###################################
 
 # read in metadata file
-metadata <- fread("/data/merscope_638850_mouseadult_registered_v2/whole_dataset/mouse_638850_registered.csv")
+metadata <- fread("/data/mouse_638850_registration/whole_dataset/mouse_638850_registered.csv")
 
 metadata <- metadata %>%
   mutate_at(vars(CCF_level1, CCF_level2), ~ na_if(., ""))
+
+# remove the
+#metadata <- metadata %>% 
+#  select(-broad_region,-registration_landmark)
 
 
 # add region information for cell types
@@ -157,32 +161,33 @@ metadata <- merge(metadata,
 
 metadata <- merge(metadata,
                   ccf_anno,
-                  by.x = "structure_acronym",
+                  by.x = "acronym",
                   by.y = "acronym",
                   all.x = T,
                   all.y = F)
 
 metadata_subset <- metadata %>% 
   filter(final_qc_passed == T) %>%
-  filter(!is.na(structure_acronym)) %>%
+  filter(!is.na(acronym)) %>%
   filter(section %in% sections_to_keep) %>% 
-  select(production_cell_id,
+  select(production_cell_id_x,
          section,
          hrc_mmc_class_name,
          hrc_mmc_subclass_name,
          hrc_mmc_supertype_name,
          hrc_mmc_cluster_name,
-         structure_acronym,
-         structure_id,
+         #structure_acronym,
+         acronym,
+         #structure_id,
+         id,
          broad_region,
          registration_landmark,
          CCF_registration,
          CCF_level1,
-         volume_x,
-         volume_y,
-         volume_z)
+         rotated_x,
+         rotated_y)
 
-############## plot Jaccard overlay with broad landmark clusters ############
+ ############## plot Jaccard overlay with broad landmark clusters ############
 
 # subset data to relevant features
 jaccard_df <- metadata_subset %>%
@@ -190,13 +195,13 @@ jaccard_df <- metadata_subset %>%
   filter(!is.na(broad_region)) %>%
   filter(CCF_level1 != "fiber tracts") %>% 
   filter(broad_region != "fiber tracts") %>% 
-  select(production_cell_id,
+  select(production_cell_id_x,
          CCF_level1,
          broad_region)
 
 # convert cell label to rownames
 jaccard_df <- jaccard_df %>% 
-  tibble::column_to_rownames("production_cell_id")
+  tibble::column_to_rownames("production_cell_id_x")
 
 # calculate the ari
 ari <- adjustedRandIndex(jaccard_df$broad_region, jaccard_df$CCF_level1)
@@ -285,13 +290,13 @@ ggsave(filename = "/results/jaccard_CCFbroad_CCFlevel1.pdf",
 jaccard_df <- metadata_subset %>%
   filter(!is.na(CCF_registration)) %>% 
   filter(!is.na(registration_landmark)) %>% 
-  select(production_cell_id,
+  select(production_cell_id_x,
          CCF_registration,
          registration_landmark)
 
 # convert cell label to rownames
 jaccard_df <- jaccard_df %>% 
-  tibble::column_to_rownames("production_cell_id")
+  tibble::column_to_rownames("production_cell_id_x")
 
 # calculate the ari
 ari <- adjustedRandIndex(jaccard_df$registration_landmark, jaccard_df$CCF_registration)
@@ -387,7 +392,7 @@ registration_old <- registration_old %>%
 
 # add cluster information (temporary)
 cluster_info <- metadata %>% 
-  select(production_cell_id,
+  select(production_cell_id_x,
          final_qc_passed,
          hrc_mmc_class_name,
          hrc_mmc_subclass_name,
@@ -397,7 +402,7 @@ cluster_info <- metadata %>%
 registration_old <- merge(registration_old,
                           cluster_info,
                           by.x = "cell_id",
-                          by.y = "production_cell_id",
+                          by.y = "production_cell_id_x",
                           all.x = T,
                           all.y = F)
 
