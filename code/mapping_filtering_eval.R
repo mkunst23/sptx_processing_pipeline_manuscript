@@ -69,6 +69,18 @@ failure_rates_by_supertype <- metadata_filtered %>%
   )
 
 
+failure_rates_by_supertype <- metadata_filtered |> 
+  filter(!is.na(hrc_mmc_supertype_name)) |> 
+  group_by(hrc_mmc_supertype_name) |> 
+  summarise(
+    total_cells = n(),
+    cells_old_fail = sum(hrc_mmc_cluster_avg_correlation <= 0.5, na.rm = TRUE),
+    cells_new_fail = sum(final_qc_passed == FALSE, na.rm = TRUE),
+    old_failure_rate = mean(hrc_mmc_cluster_avg_correlation <= 0.5, na.rm = TRUE) * 100,
+    new_failure_rate = mean(final_qc_passed == FALSE, na.rm = TRUE) * 100,
+    .groups = "drop"
+  )
+
 # convert tot long format
 failure_rate_long <- failure_rates_by_supertype %>% 
   pivot_longer(
@@ -107,6 +119,10 @@ ggsave(filename = "/results/mapping_filter_qc.pdf",
        width = 12,
        height = 8, 
        dpi = 300)
+
+# add difference to failure rate
+failure_rates_by_supertype$diff <- failure_rates_by_supertype$old_failure_rate - failure_rates_by_supertype$new_failure_rate
+
 
 # save as csv file
 fwrite(failure_rates_by_supertype,

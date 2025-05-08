@@ -17,7 +17,7 @@ suppressPackageStartupMessages({
   library(googlesheets4)
 })
 
-############### setup environment ######################
+########################## setup environment #########################
 
 options(stringsAsFactors = FALSE)
 options(scipen=999)
@@ -57,6 +57,10 @@ class_color_palette <- setNames(class_colors$class_color, class_colors$class_id_
 # section to plot
 # LQ_1: 1199651045
 # Borders: 1199651018 1199651029 1199651002
+# P_MY_1:
+# PSV:
+# IC:
+# White matter and RT
 
 # load in metadata file
 metadata <- fread("/data/merscope_638850_mouseadult_registered_v2/whole_dataset/mouse_638850_registered.csv")
@@ -224,8 +228,8 @@ plot <- ggplot(metadata_plot,
 
 ggsave(filename = "/results/sd_borders_sections.png", 
        plot = plot, 
-       width = 6,
-       height = 4, 
+       width = 4,
+       height = 6, 
        dpi = 160)
 
 ################# plot stacked bar graph for classes ##################
@@ -270,4 +274,157 @@ ggsave(filename = "/results/borders_class_distribution.png",
        plot = plot, 
        width = 8,
        height = 6, 
+       dpi = 160)
+
+############# plot sections for P_MY_1 ######################
+
+example_sections <- c("1199651009",
+                      "1199651005",
+                      "1199651002",
+                      "1199650999",
+                      "1199650984",
+                      "1199650981",
+                      "1199650978",
+                      "1199650975",
+                      "1199650972",
+                      "1199650968",
+                      "1199650965",
+                      "1199650962",
+                      "1199650959",
+                      "1199650956",
+                      "1199650953",
+                      "1199650950",
+                      "1199650944",
+                      "1199650941")
+
+example_domains <- c("P-MY_1")
+
+metadata_plot <- metadata_subset %>% 
+  filter(section %in% example_sections)
+
+# Add a new column for color and transparency
+metadata_plot <- metadata_plot %>%
+  mutate(
+    plot_color = ifelse(spatial_domain_level_2 %in% example_domains, 
+                        spatial_domain_palette[spatial_domain_level_2], 
+                        "grey"),
+    plot_alpha = ifelse(spatial_domain_level_2 %in% example_domains, 1, 0.3)
+  )
+
+plot <- ggplot(metadata_plot,
+               aes(x = volume_x,
+                   y = volume_y,
+                   color = plot_color,
+                   alpha = plot_alpha)) +
+  geom_point(size = 0.5,
+             stroke = 0,
+             shape = 19) +
+  coord_fixed() +
+  scale_color_identity() +  # Use the exact colors specified in the data
+  scale_alpha_identity() +  # Use the exact alpha values specified in the data
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none", alpha = "none") +
+  facet_wrap(~fct_rev(section), nrow = 3) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/P_MY_sections.png", 
+       plot = plot, 
+       width = 12,
+       height = 4, 
+       dpi = 160)
+
+############## plot IC sections #####################
+
+example_sections <- c("1199651005",
+                      "1199651002",
+                      "1199650999",
+                      "1199650984",
+                      "1199650981",
+                      "1199650978",
+                      "1199650975",
+                      "1199650972")
+
+example_domains <- c("IC_1")
+
+metadata_plot <- metadata_subset %>% 
+  filter(section %in% example_sections)
+
+# Add a new column for color and transparency
+metadata_plot <- metadata_plot %>%
+  mutate(
+    plot_color = ifelse(spatial_domain_level_2 %in% example_domains, 
+                        spatial_domain_palette[spatial_domain_level_2], 
+                        "grey"),
+    plot_alpha = ifelse(spatial_domain_level_2 %in% example_domains, 1, 0.3)
+  )
+
+plot <- ggplot(metadata_plot,
+               aes(x = volume_x,
+                   y = volume_y,
+                   color = plot_color,
+                   alpha = plot_alpha)) +
+  geom_point(size = 0.5,
+             stroke = 0,
+             shape = 19) +
+  coord_fixed() +
+  scale_color_identity() +  # Use the exact colors specified in the data
+  scale_alpha_identity() +  # Use the exact alpha values specified in the data
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none", alpha = "none") +
+  facet_wrap(~fct_rev(section), nrow = 2) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/IC_sections.png", 
+       plot = plot, 
+       width = 12,
+       height = 4, 
+       dpi = 160)
+
+######################### plot PSV sections ##########################
+
+example_sections <- c("1199650981",
+                      "1199650978",
+                      "1199650975",
+                      "1199650972")
+
+example_domains <- c("PSV_1")
+
+metadata_plot <- metadata_subset %>% 
+  filter(section %in% example_sections)
+
+# Add a new column for color and transparency
+metadata_plot <- metadata_plot %>%
+  mutate(
+    plot_color = ifelse(spatial_domain_level_2 %in% example_domains, 
+                        spatial_domain_palette[spatial_domain_level_2], 
+                        "grey"),
+    plot_alpha = ifelse(spatial_domain_level_2 %in% example_domains, 1, 0.3)
+  )
+
+plot <- ggplot(metadata_plot,
+               aes(x = volume_x,
+                   y = volume_y,
+                   color = plot_color,
+                   alpha = plot_alpha)) +
+  geom_point(size = 0.5,
+             stroke = 0,
+             shape = 19) +
+  coord_fixed() +
+  scale_color_identity() +  # Use the exact colors specified in the data
+  scale_alpha_identity() +  # Use the exact alpha values specified in the data
+  scale_y_reverse() +
+  theme(legend.position = "none") +
+  guides(color = "none", alpha = "none") +
+  facet_wrap(~fct_rev(section), nrow = 1) +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+ggsave(filename = "/results/PSV_sections.png", 
+       plot = plot, 
+       width = 12,
+       height = 2, 
        dpi = 160)

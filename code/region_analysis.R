@@ -190,7 +190,7 @@ proportion_colors <- c('#005DFFFF',
 ############## process metadata file ####################
 
 # read in metadata file
-metadata <- fread("/data/merscope_638850_mouseadult_registered_v2/whole_dataset/mouse_638850_registered.csv")
+metadata <- fread("/data/mouse_638850_registration//whole_dataset/mouse_638850_registered.csv")
 
 metadata <- metadata %>%
   mutate_at(vars(CCF_level1, CCF_level2), ~ na_if(., ""))
